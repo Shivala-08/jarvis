@@ -1,0 +1,39 @@
+[engine.ollama]
+base_url = "http://localhost:11434"
+default_model = "llama3.1:latest"
+embedding_model = "nomic-embed-text"
+fallback_model = "llama3.1:8b"
+
+[engine.ollama.models]
+reasoning = "llama3.1:latest"
+coding = "llama3.1:latest"
+embedding = "nomic-embed-text"
+
+[speech]
+whisper_model = "small.en"
+whisper_compute_type = "int8"       # Use "float16" on GPU machines
+tts_voice = "af_heart"
+tts_speed = 1.05                     # 1.0–1.1× for calm, non-urgent tone
+
+[memory]
+qdrant_url = "http://localhost:6333"
+collection_name = "adhd_memory"
+embedding_dim = 768                   # nomic-embed-text dimension
+
+[scheduler]
+transition_buffer_minutes = 15
+time_scaling_alpha_min = 1.4
+time_scaling_alpha_max = 1.8
+max_sprint_minutes = 25
+
+[body_double]
+drift_threshold_minutes = 10
+nudge_cooldown_minutes = 15
+
+[guardrails]
+no_red_badges = true
+no_overdue_counters = true
+no_modal_dialogs = true
+voice_pacing_min = 1.0
+voice_pacing_max = 1.1
+supportive_phrasing = true

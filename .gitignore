@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+ENV/
+
+# Node
+node_modules/
+.next/
+.nuxt/
+
+# Tauri
+src-tauri/target/
+
+# Qdrant
+qdrant_data/
+
+# Ollama
+models/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.local
+*.local
+
+# Google Calendar OAuth (SENSITIVE - never commit)
+config/google_client_secret.json
+config/google_token.json
+
+# Memory/data
+*.db
+*.sqlite
+data/
+*.log

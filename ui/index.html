@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADHD Co-Processor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0f0f1a;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 24px; }
+        h1 { font-size: 1.6rem; margin-bottom: 8px; color: #a78bfa; }
+        .subtitle { color: #888; font-size: 0.9rem; margin-bottom: 24px; }
+
+        /* Cards */
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+        .card {
+            background: #1a1a2e;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #2a2a4a;
+        }
+        .card h2 { font-size: 1rem; color: #a78bfa; margin-bottom: 12px; }
+        .card-full { grid-column: 1 / -1; }
+
+        /* Brain dump input */
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            background: #12121f;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #e0e0e0;
+            padding: 12px;
+            font-size: 0.95rem;
+            resize: vertical;
+            font-family: inherit;
+        }
+        textarea:focus { outline: none; border-color: #a78bfa; }
+        textarea::placeholder { color: #555; }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: background 0.2s;
+            margin-top: 12px;
+        }
+        .btn-primary { background: #7c3aed; color: white; }
+        .btn-primary:hover { background: #6d28d9; }
+        .btn-secondary { background: #2a2a4a; color: #ccc; }
+        .btn-secondary:hover { background: #3a3a5a; }
+        .btn-danger { background: #991b1b; color: #fca5a5; }
+        .btn-danger:hover { background: #b91c1c; }
+        .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        /* Schedule list */
+        .schedule-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid #1f1f35;
+        }
+        .schedule-item:last-child { border-bottom: none; }
+        .schedule-time { color: #888; font-size: 0.8rem; min-width: 90px; font-family: monospace; }
+        .schedule-label { flex: 1; }
+        .schedule-badge {
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            background: #2a2a4a;
+            color: #a78bfa;
+        }
+        .buffer-badge { background: #1a3a2a; color: #6ee7b7; }
+
+        /* Memory list */
+        .memory-item {
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            background: #12121f;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            border-left: 3px solid #7c3aed;
+        }
+
+        /* Voice status */
+        .voice-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 16px;
+            background: #12121f;
+            border-radius: 8px;
+            margin-top: 12px;
+        }
+        .voice-dot {
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            background: #4ade80;
+        }
+        .voice-dot.recording { background: #ef4444; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+        /* Study plan */
+        .study-unit {
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            background: #12121f;
+            border-radius: 8px;
+            border-left: 3px solid #3b82f6;
+        }
+        .study-unit .unit-title { font-weight: 600; margin-bottom: 4px; }
+        .study-unit .unit-meta { font-size: 0.8rem; color: #888; }
+        .study-unit .recall-q { font-size: 0.85rem; color: #fbbf24; margin-top: 4px; }
+
+        /* Loading spinner */
+        .loading {
+            display: inline-block;
+            width: 16px; height: 16px;
+            border: 2px solid #555;
+            border-top-color: #a78bfa;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Guardrails notice */
+        .guardrails {
+            text-align: center;
+            color: #555;
+            font-size: 0.75rem;
+            margin-top: 32px;
+            padding-top: 16px;
+            border-top: 1px solid #1f1f35;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 ADHD Co-Processor</h1>
+        <p class="subtitle">Local-first · Zero-cost · Privacy-respecting</p>
+
+        <!-- Brain Dump -->
+        <div class="card card-full" style="margin-bottom: 16px;">
+            <h2>💭 Brain Dump</h2>
+            <textarea id="braindump-input" placeholder="Type or paste your thoughts here — I'll organize them for you..."></textarea>
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="processBrainDump()">Process Thoughts</button>
+                <button class="btn btn-secondary" onclick="startVoiceDump()">🎙️ Voice Dump</button>
+            </div>
+            <div id="braindump-output" style="margin-top: 12px;"></div>
+        </div>
+
+        <div class="grid">
+            <!-- Today's Schedule -->
+            <div class="card">
+                <h2>📅 Today's Schedule</h2>
+                <div id="schedule-list">
+                    <p style="color:#888; font-size:0.85rem;">Loading schedule...</p>
+                </div>
+                <button class="btn btn-secondary" onclick="rebalanceSchedule()">🔄 Rebalance</button>
+            </div>
+
+            <!-- Memories -->
+            <div class="card">
+                <h2>🧠 Memories</h2>
+                <div id="memory-list">
+                    <p style="color:#888; font-size:0.85rem;">Loading memories...</p>
+                </div>
+                <button class="btn btn-secondary" onclick="searchMemory()">🔍 Search</button>
+            </div>
+        </div>
+
+        <!-- Study Plan -->
+        <div class="card" style="margin-top: 16px;">
+            <h2>📚 Study Plan</h2>
+            <input id="study-topic" type="text" placeholder="Enter a topic to decompose..."
+                style="width:100%; padding:10px; background:#12121f; border:1px solid #333; border-radius:8px; color:#e0e0e0; font-size:0.95rem; margin-bottom:12px;">
+            <button class="btn btn-primary" onclick="generateStudyPlan()">Generate Plan</button>
+            <div id="study-plan-output" style="margin-top: 12px;"></div>
+        </div>
+
+        <!-- Voice Status -->
+        <div class="card" style="margin-top: 16px;">
+            <h2>🎙️ Voice Interface <span style="font-size:0.75rem; color:#888; font-weight:400;">WebSocket real-time</span></h2>
+            <div class="voice-status">
+                <div class="voice-dot" id="voice-dot"></div>
+                <span id="voice-status-text">Ready — click Start Listening to begin</span>
+            </div>
+            <div style="margin-top:10px; font-size:0.8rem; color:#888;">
+                Mode:
+                <label style="margin-left:8px; cursor:pointer;">
+                    <input type="radio" name="voice-mode" value="command" checked onchange="voiceMode='command'"> Command
+                </label>
+                <label style="margin-left:12px; cursor:pointer;">
+                    <input type="radio" name="voice-mode" value="braindump" onchange="voiceMode='braindump'"> Brain Dump
+                </label>
+            </div>
+            <div class="btn-row" style="margin-top: 12px;">
+                <button class="btn btn-primary" onclick="startListening()">🎤 Start Listening</button>
+                <button class="btn btn-secondary" onclick="stopListening()">⏹ Stop</button>
+            </div>
+            <div id="voice-log" style="margin-top:12px; max-height:200px; overflow-y:auto;"></div>
+        </div>
+
+        <!-- Data Sovereignty -->
+        <div class="card" style="margin-top: 16px;">
+            <h2>🔐 Data Sovereignty</h2>
+            <p style="font-size: 0.85rem; color: #888; margin-bottom: 12px;">
+                All data stays on your machine. No cloud calls. No telemetry.
+            </p>
+            <div class="btn-row">
+                <button class="btn btn-danger" onclick="purgeAll()">🗑️ Purge All Memory</button>
+                <button class="btn btn-secondary" onclick="checkNetwork()">🌐 Network Check</button>
+            </div>
+            <div id="sovereignty-output" style="margin-top: 8px; font-size: 0.85rem;"></div>
+        </div>
+
+        <div class="guardrails">
+            No red badges · No overdue counters · No modal dialogs · Supportive phrasing only<br>
+            Voice pacing: 1.0–1.1× · All inference local · Zero paid API keys
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '';  // Same origin — FastAPI serves both UI and API
+
+        // ========== Helper ==========
+        async function apiPost(path, body) {
+            const res = await fetch(`${API_BASE}${path}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            if (!res.ok) throw new Error(`API error: ${res.status}`);
+            return res.json();
+        }
+
+        async function apiGet(path) {
+            const res = await fetch(`${API_BASE}${path}`);
+            if (!res.ok) throw new Error(`API error: ${res.status}`);
+            return res.json();
+        }
+
+        // ========== Brain Dump ==========
+        async function processBrainDump() {
+            const input = document.getElementById('braindump-input').value;
+            if (!input.trim()) return;
+            const output = document.getElementById('braindump-output');
+            output.innerHTML = '<p style="color:#a78bfa;"><span class="loading"></span> Processing your thoughts locally...</p>';
+            try {
+                const result = await apiPost('/api/braindump', { text: input });
+                const thoughts = result.thoughts || [];
+                const mood = result.mood_hint || 'unknown';
+                const step = result.suggested_first_step || 'none';
+                output.innerHTML = `
+                    <div class="memory-item" style="border-left-color:#4ade80;">✅ Captured ${thoughts.length} thoughts</div>
+                    <div class="memory-item" style="border-left-color:#fbbf24;">💭 Mood hint: ${mood}</div>
+                    <div class="memory-item" style="border-left-color:#3b82f6;">🎯 Suggested first step: ${step}</div>
+                `;
+                // Refresh schedule and memories after brain dump
+                loadSchedule();
+                loadMemories();
+            } catch (err) {
+                output.innerHTML = `<div class="memory-item" style="border-left-color:#ef4444;">⚠️ Error: ${err.message}</div>`;
+            }
+        }
+
+        // ========== Voice Dump ==========
+        async function startVoiceDump() {
+            voiceMode = 'braindump';
+            await startListening();
+            document.getElementById('voice-status-text').textContent = 'Recording brain dump... speak freely (15s recommended)';
+            // Auto-stop after 15 seconds
+            setTimeout(() => {
+                if (voiceWs && voiceWs.readyState === WebSocket.OPEN) {
+                    stopListening();
+                }
+            }, 15000);
+        }
+
+        // ========== Schedule ==========
+        async function loadSchedule() {
+            const list = document.getElementById('schedule-list');
+            try {
+                const data = await apiGet('/api/schedule');
+                const blocks = data.schedule || [];
+                if (blocks.length === 0) {
+                    list.innerHTML = '<p style="color:#888; font-size:0.85rem;">No tasks scheduled. Add some via Brain Dump!</p>';
+                    return;
+                }
+                list.innerHTML = blocks.map(b => {
+                    const isBuffer = b.type === 'buffer';
+                    const marker = isBuffer ? '☕' : '🔖';
+                    const badgeClass = isBuffer ? 'buffer-badge' : '';
+                    const badgeLabel = isBuffer ? 'break' : (b.priority || '');
+                    const start = b.start ? b.start.substring(11, 16) : '—';
+                    const end = b.end ? b.end.substring(11, 16) : '—';
+                    const mins = b.scaled_minutes || '—';
+                    return `
+                        <div class="schedule-item">
+                            <span class="schedule-time">${start}–${end}</span>
+                            <span class="schedule-label">${b.label || b.type}</span>
+                            <span class="schedule-badge ${badgeClass}">${badgeLabel} · ${mins}m</span>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                list.innerHTML = `<p style="color:#888; font-size:0.85rem;">⚠️ Could not load schedule: ${err.message}</p>`;
+            }
+        }
+
+        async function rebalanceSchedule() {
+            const list = document.getElementById('schedule-list');
+            list.innerHTML = '<p style="color:#6ee7b7;"><span class="loading"></span> Rebalancing...</p>';
+            try {
+                const data = await apiPost('/api/rebalance', { missed_block_id: null });
+                const suggestion = data.suggestion || 'Schedule updated.';
+                list.innerHTML = `<p style="color:#6ee7b7;">🔄 ${suggestion}</p>`;
+                loadSchedule();
+            } catch (err) {
+                list.innerHTML = `<p style="color:#888;">⚠️ Rebalance error: ${err.message}</p>`;
+            }
+        }
+
+        // ========== Memories ==========
+        async function loadMemories() {
+            const list = document.getElementById('memory-list');
+            try {
+                const data = await apiGet('/api/memories');
+                const memories = data.memories || [];
+                if (memories.length === 0) {
+                    list.innerHTML = '<p style="color:#888; font-size:0.85rem;">No memories stored yet.</p>';
+                    return;
+                }
+                list.innerHTML = memories.slice(0, 10).map(m =>
+                    `<div class="memory-item">${m.memory || m.text || '?'}</div>`
+                ).join('');
+            } catch (err) {
+                list.innerHTML = `<p style="color:#888; font-size:0.85rem;">⚠️ Could not load memories: ${err.message}</p>`;
+            }
+        }
+
+        async function searchMemory() {
+            const query = prompt('Search your memories:');
+            if (!query) return;
+            const list = document.getElementById('memory-list');
+            list.innerHTML = '<p style="color:#888;"><span class="loading"></span> Searching...</p>';
+            try {
+                const data = await apiPost('/api/memories/search', { query });
+                const results = data.results || [];
+                if (results.length === 0) {
+                    list.innerHTML = `<p style="color:#888;">No results for "${query}"</p>`;
+                    return;
+                }
+                list.innerHTML = results.map(r =>
+                    `<div class="memory-item" style="border-left-color:#3b82f6;">📌 ${r.memory} <span style="color:#888; font-size:0.75rem;">(${(r.score || 0).toFixed(3)})</span></div>`
+                ).join('');
+            } catch (err) {
+                list.innerHTML = `<p style="color:#888;">⚠️ Search error: ${err.message}</p>`;
+            }
+        }
+
+        // ========== Study Plan ==========
+        async function generateStudyPlan() {
+            const topic = document.getElementById('study-topic').value;
+            if (!topic.trim()) return;
+            const output = document.getElementById('study-plan-output');
+            output.innerHTML = '<p style="color:#a78bfa;"><span class="loading"></span> Generating study plan locally...</p>';
+            try {
+                const plan = await apiPost('/api/study', { topic });
+                const units = plan.units || [];
+                if (units.length === 0) {
+                    output.innerHTML = '<p style="color:#888;">No units generated.</p>';
+                    return;
+                }
+                output.innerHTML = units.map(u => {
+                    const prereqs = (u.prerequisites || []).filter(p => p !== 'none').join(', ') || 'none';
+                    const questions = (u.active_recall_questions || []).map(q => `❓ ${q}`).join('<br>');
+                    return `
+                        <div class="study-unit">
+                            <div class="unit-title">[${u.id}] ${u.title}</div>
+                            <div class="unit-meta">${u.estimated_minutes} min · ${u.difficulty || '—'} · requires ${prereqs}</div>
+                            <div class="recall-q">${questions}</div>
+                        </div>
+                    `;
+                }).join('');
+                const total = plan.total_estimated_minutes || units.reduce((s, u) => s + (u.estimated_minutes || 0), 0);
+                output.innerHTML += `<p style="color:#888; font-size:0.85rem; margin-top:8px;">⏱ Total: ${total} minutes</p>`;
+            } catch (err) {
+                output.innerHTML = `<div class="memory-item" style="border-left-color:#ef4444;">⚠️ Error: ${err.message}</div>`;
+            }
+        }
+
+        // ========== Voice (WebSocket streaming) ==========
+        let voiceWs = null;
+        let voiceMediaRecorder = null;
+        let voiceAudioContext = null;
+        let voiceStream = null;
+        let voiceMode = 'command';  // 'command' or 'braindump'
+        let audioChunksB64 = [];
+
+        function getWsUrl() {
+            const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            return `${proto}//${location.host}/ws/voice`;
+        }
+
+        async function startListening() {
+            const dot = document.getElementById('voice-dot');
+            const status = document.getElementById('voice-status-text');
+
+            try {
+                // Request microphone access
+                voiceStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        sampleRate: 16000,
+                        channelCount: 1,
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                    }
+                });
+
+                // Open WebSocket
+                voiceWs = new WebSocket(getWsUrl());
+
+                voiceWs.onopen = () => {
+                    status.textContent = 'Connected — starting recording...';
+                    voiceWs.send(JSON.stringify({
+                        type: 'start',
+                        mode: voiceMode,
+                        sample_rate: 16000,
+                    }));
+
+                    // Set up MediaRecorder to capture audio
+                    // Use webm/opus for browser compat, we'll send raw PCM instead
+                    voiceAudioContext = new AudioContext({ sampleRate: 16000 });
+                    const source = voiceAudioContext.createMediaStreamSource(voiceStream);
+                    const processor = voiceAudioContext.createScriptProcessor(4096, 1, 1);
+
+                    audioChunksB64 = [];
+
+                    processor.onaudioprocess = (e) => {
+                        if (!voiceWs || voiceWs.readyState !== WebSocket.OPEN) return;
+                        const inputData = e.inputBuffer.getChannelData(0);
+                        // Convert float32 to base64
+                        const bytes = new Uint8Array(inputData.buffer);
+                        let binary = '';
+                        for (let i = 0; i < bytes.length; i++) {
+                            binary += String.fromCharCode(bytes[i]);
+                        }
+                        const b64 = btoa(binary);
+                        voiceWs.send(JSON.stringify({ type: 'audio', data: b64 }));
+                    };
+
+                    source.connect(processor);
+                    processor.connect(voiceAudioContext.destination);
+
+                    // Store refs for cleanup
+                    voiceWs._processor = processor;
+                    voiceWs._source = source;
+
+                    dot.classList.add('recording');
+                    status.textContent = 'Listening... speak a command';
+                };
+
+                voiceWs.onmessage = (event) => {
+                    const msg = JSON.parse(event.data);
+                    handleVoiceMessage(msg);
+                };
+
+                voiceWs.onerror = (err) => {
+                    status.textContent = 'WebSocket error — is the server running?';
+                    dot.classList.remove('recording');
+                    cleanupVoice();
+                };
+
+                voiceWs.onclose = () => {
+                    dot.classList.remove('recording');
+                    cleanupVoice();
+                };
+
+            } catch (err) {
+                status.textContent = `Microphone error: ${err.message}`;
+                dot.classList.remove('recording');
+            }
+        }
+
+        function appendVoiceLog(html) {
+            const log = document.getElementById('voice-log');
+            if (!log) return;
+            log.innerHTML += html;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function handleVoiceMessage(msg) {
+            const status = document.getElementById('voice-status-text');
+            const dot = document.getElementById('voice-dot');
+
+            switch (msg.type) {
+                case 'status':
+                    status.textContent = msg.text;
+                    break;
+
+                case 'transcript':
+                    status.textContent = `Heard: "${msg.text}"`;
+                    appendVoiceLog(`<div class="memory-item" style="border-left-color:#3b82f6;">📝 ${msg.text}</div>`);
+                    break;
+
+                case 'response_text':
+                    appendVoiceLog(`<div class="memory-item" style="border-left-color:#4ade80;">💬 ${msg.text}</div>`);
+                    break;
+
+                case 'response_audio':
+                    playAudioChunk(msg.data, msg.sample_rate, msg.is_final);
+                    break;
+
+                case 'error':
+                    status.textContent = msg.text;
+                    appendVoiceLog(`<div class="memory-item" style="border-left-color:#ef4444;">⚠️ ${msg.text}</div>`);
+                    break;
+            }
+        }
+
+        function playAudioChunk(b64Data, sampleRate, isFinal) {
+            try {
+                const raw = atob(b64Data);
+                const bytes = new Uint8Array(raw.length);
+                for (let i = 0; i < raw.length; i++) {
+                    bytes[i] = raw.charCodeAt(i);
+                }
+                const float32 = new Float32Array(bytes.buffer);
+
+                const ctx = new AudioContext({ sampleRate: sampleRate });
+                const buffer = ctx.createBuffer(1, float32.length, sampleRate);
+                buffer.getChannelData(0).set(float32);
+
+                const source = ctx.createBufferSource();
+                source.buffer = buffer;
+                source.connect(ctx.destination);
+                source.start();
+
+                // Update status when final chunk finishes
+                if (isFinal) {
+                    source.onended = () => {
+                        document.getElementById('voice-status-text').textContent = 'Ready — speak or click Start Listening';
+                    };
+                }
+            } catch (err) {
+                console.error('Audio playback error:', err);
+            }
+        }
+
+        function stopListening() {
+            const dot = document.getElementById('voice-dot');
+            const status = document.getElementById('voice-status-text');
+
+            if (voiceWs && voiceWs.readyState === WebSocket.OPEN) {
+                voiceWs.send(JSON.stringify({ type: 'stop' }));
+                status.textContent = 'Processing...';
+            }
+            cleanupVoice();
+        }
+
+        function cleanupVoice() {
+            if (voiceWs && voiceWs._processor) {
+                try {
+                    voiceWs._processor.disconnect();
+                    voiceWs._source.disconnect();
+                } catch (e) {}
+            }
+            if (voiceStream) {
+                voiceStream.getTracks().forEach(t => t.stop());
+                voiceStream = null;
+            }
+            if (voiceAudioContext) {
+                voiceAudioContext.close().catch(() => {});
+                voiceAudioContext = null;
+            }
+            voiceWs = null;
+            document.getElementById('voice-dot').classList.remove('recording');
+        }
+
+        // ========== Data Sovereignty ==========
+        async function purgeAll() {
+            if (!confirm('Delete all stored memories? This cannot be undone.')) return;
+            const output = document.getElementById('sovereignty-output');
+            output.innerHTML = '<span style="color:#fbbf24;"><span class="loading"></span> Purging all memories...</span>';
+            try {
+                const result = await apiPost('/api/purge', {});
+                if (result.status === 'success') {
+                    // Verify purge
+                    const verify = await apiGet('/api/purge-status');
+                    if (verify.purged) {
+                        output.innerHTML = `<span style="color:#4ade80;">✅ All memories purged. Verified: ${verify.message}</span>`;
+                    } else {
+                        output.innerHTML = `<span style="color:#fbbf24;">⚠️ Purge sent but verification: ${verify.message}</span>`;
+                    }
+                    loadMemories();
+                } else {
+                    output.innerHTML = `<span style="color:#fbbf24;">⚠️ ${result.message}</span>`;
+                }
+            } catch (err) {
+                output.innerHTML = `<span style="color:#ef4444;">⚠️ Purge failed: ${err.message}</span>`;
+            }
+        }
+
+        async function checkNetwork() {
+            const output = document.getElementById('sovereignty-output');
+            output.innerHTML = '<span style="color:#a78bfa;"><span class="loading"></span> Checking outbound connections...</span>';
+            try {
+                const data = await apiGet('/api/network-check');
+                const status = data.status;
+                const color = status === 'clean' ? '#4ade80' : status === 'warning' ? '#fbbf24' : '#ef4444';
+                const icon = status === 'clean' ? '✅' : status === 'warning' ? '⚠️' : '❌';
+                let html = `<span style="color:${color};">${icon} ${data.message}</span>`;
+                if (data.connections && data.connections.length > 0) {
+                    html += '<div style="margin-top:6px;">';
+                    data.connections.forEach(c => {
+                        html += `<div style="color:#fbbf24; font-size:0.8rem;">  → ${c.remote_ip}:${c.remote_port}</div>`;
+                    });
+                    html += '</div>';
+                }
+                output.innerHTML = html;
+            } catch (err) {
+                output.innerHTML = `<span style="color:#ef4444;">⚠️ Network check failed: ${err.message}</span>`;
+            }
+        }
+
+        // ========== Init: load data on page load ==========
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSchedule();
+            loadMemories();
+        });
+    </script>
+</body>
+</html>
