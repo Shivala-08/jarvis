@@ -330,6 +330,25 @@ def api_purge_status():
         return {"purged": False, "message": f"Could not verify: {e}"}
 
 
+@app.get("/api/obsidian/notes")
+def api_obsidian_notes():
+    """List recent notes in the Obsidian vault."""
+    from pathlib import Path
+    try:
+        from memory.adhd_memory import ObsidianClient
+        client = ObsidianClient()
+        vault_path = client.vault_path
+        if not vault_path.exists():
+            return {"notes": []}
+        notes = sorted(
+            [f.name for f in vault_path.glob("*.md") if f.name != "Dashboard.md"],
+            reverse=True,
+        )
+        return {"notes": notes}
+    except Exception as e:
+        return {"notes": [], "error": str(e)}
+
+
 @app.get("/api/obsidian")
 def api_obsidian_status():
     """Phase 3.5: Check Obsidian vault status.

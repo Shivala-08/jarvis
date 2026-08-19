@@ -135,6 +135,34 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
+        /* Vault notes */
+        .vault-note {
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            background: #12121f;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            border-left: 3px solid #f59e0b;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .vault-note .note-name { color: #e0e0e0; }
+        .vault-note .note-time { color: #888; font-size: 0.75rem; font-family: monospace; }
+        .vault-status-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .vault-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .vault-dot.online { background: #4ade80; }
+        .vault-dot.offline { background: #888; }
+
         /* Guardrails notice */
         .guardrails {
             text-align: center;
@@ -180,6 +208,30 @@
                 </div>
                 <button class="btn btn-secondary" onclick="searchMemory()">🔍 Search</button>
             </div>
+
+            <!-- Obsidian Vault -->
+            <div class="card">
+                <h2>📓 Obsidian Vault</h2>
+                <div id="vault-status">
+                    <p style="color:#888; font-size:0.85rem;">Loading vault...</p>
+                </div>
+                <div id="vault-notes">
+                </div>
+                <button class="btn btn-secondary" onclick="loadVaultStatus()" style="margin-top:8px;">🔄 Refresh</button>
+            </div>
+
+            <!-- Data Sovereignty -->
+            <div class="card">
+                <h2>🔐 Data Sovereignty</h2>
+                <p style="font-size: 0.85rem; color: #888; margin-bottom: 12px;">
+                    All data stays on your machine. No cloud calls. No telemetry.
+                </p>
+                <div class="btn-row">
+                    <button class="btn btn-danger" onclick="purgeAll()">🗑️ Purge All Memory</button>
+                    <button class="btn btn-secondary" onclick="checkNetwork()">🌐 Network Check</button>
+                </div>
+                <div id="sovereignty-output" style="margin-top: 8px; font-size: 0.85rem;"></div>
+            </div>
         </div>
 
         <!-- Study Plan -->
@@ -214,18 +266,7 @@
             <div id="voice-log" style="margin-top:12px; max-height:200px; overflow-y:auto;"></div>
         </div>
 
-        <!-- Data Sovereignty -->
-        <div class="card" style="margin-top: 16px;">
-            <h2>🔐 Data Sovereignty</h2>
-            <p style="font-size: 0.85rem; color: #888; margin-bottom: 12px;">
-                All data stays on your machine. No cloud calls. No telemetry.
-            </p>
-            <div class="btn-row">
-                <button class="btn btn-danger" onclick="purgeAll()">🗑️ Purge All Memory</button>
-                <button class="btn btn-secondary" onclick="checkNetwork()">🌐 Network Check</button>
-            </div>
-            <div id="sovereignty-output" style="margin-top: 8px; font-size: 0.85rem;"></div>
-        </div>
+
 
         <div class="guardrails">
             No red badges · No overdue counters · No modal dialogs · Supportive phrasing only<br>
@@ -269,9 +310,10 @@
                     <div class="memory-item" style="border-left-color:#fbbf24;">💭 Mood hint: ${mood}</div>
                     <div class="memory-item" style="border-left-color:#3b82f6;">🎯 Suggested first step: ${step}</div>
                 `;
-                // Refresh schedule and memories after brain dump
+                // Refresh schedule, memories, and vault after brain dump
                 loadSchedule();
                 loadMemories();
+                loadVaultStatus();
             } catch (err) {
                 output.innerHTML = `<div class="memory-item" style="border-left-color:#ef4444;">⚠️ Error: ${err.message}</div>`;
             }
@@ -664,10 +706,64 @@
             }
         }
 
+        // ========== Obsidian Vault ==========
+        async function loadVaultStatus() {
+            const statusEl = document.getElementById('vault-status');
+            const notesEl = document.getElementById('vault-notes');
+            try {
+                const data = await apiGet('/api/obsidian');
+                const reachable = data.server_reachable;
+                const noteCount = data.note_count || 0;
+                const dotClass = reachable ? 'online' : 'offline';
+                const label = reachable ? 'Obsidian connected' : 'Obsidian offline (vault on disk)';
+                statusEl.innerHTML = `
+                    <div class="vault-status-row">
+                        <div class="vault-dot ${dotClass}"></div>
+                        <span style="font-size:0.85rem;">${label}</span>
+                        <span style="color:#888; font-size:0.8rem; margin-left:auto;">${noteCount} notes</span>
+                    </div>
+                `;
+                // Fetch recent notes from the vault directory
+                await loadVaultNotes();
+            } catch (err) {
+                statusEl.innerHTML = `<p style="color:#888; font-size:0.85rem;">⚠️ Could not load vault: ${err.message}</p>`;
+            }
+        }
+
+        async function loadVaultNotes() {
+            const notesEl = document.getElementById('vault-notes');
+            try {
+                // Use the vault API to list notes (we fetch from the filesystem via a helper)
+                const data = await apiGet('/api/obsidian/notes');
+                const notes = data.notes || [];
+                if (notes.length === 0) {
+                    notesEl.innerHTML = '<p style="color:#888; font-size:0.82rem; margin-top:6px;">No notes yet — do a brain dump to create one.</p>';
+                    return;
+                }
+                notesEl.innerHTML = notes.slice(0, 8).map(n => {
+                    // Parse timestamp from filename: YYYY-MM-DD-HHMM.md
+                    const match = n.match(/(\d{4}-\d{2}-\d{2})-(\d{2})(\d{2})\.md/);
+                    const dateStr = match ? `${match[1]} ${match[2]}:${match[3]}` : n;
+                    return `
+                        <div class="vault-note">
+                            <span class="note-name">📝 ${n.replace('.md', '')}</span>
+                            <span class="note-time">${dateStr}</span>
+                        </div>
+                    `;
+                }).join('');
+                if (notes.length > 8) {
+                    notesEl.innerHTML += `<p style="color:#666; font-size:0.75rem; margin-top:4px;">… and ${notes.length - 8} more</p>`;
+                }
+            } catch (err) {
+                notesEl.innerHTML = '<p style="color:#888; font-size:0.82rem; margin-top:6px;">Open vault/ in Obsidian to browse notes.</p>';
+            }
+        }
+
         // ========== Init: load data on page load ==========
         document.addEventListener('DOMContentLoaded', () => {
             loadSchedule();
             loadMemories();
+            loadVaultStatus();
         });
     </script>
 </body>
