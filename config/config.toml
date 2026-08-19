@@ -31,6 +31,12 @@ max_sprint_minutes = 25
 drift_threshold_minutes = 10
 nudge_cooldown_minutes = 15
 
+[obsidian]
+enabled = true
+base_url = "http://localhost:27124"
+vault_path = "vault"
+api_token = ""                    # Set if you enabled auth in the Local REST API plugin
+
 [guardrails]
 no_red_badges = true
 no_overdue_counters = true

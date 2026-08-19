@@ -325,6 +325,41 @@ def api_purge_status():
         return {"purged": False, "message": f"Could not verify: {e}"}
 
 
+@app.get("/api/obsidian")
+def api_obsidian_status():
+    """Phase 3.5: Check Obsidian vault status.
+
+    Reports whether the Obsidian REST API server is reachable and
+    how many notes are in the vault directory.
+    """
+    from pathlib import Path
+    try:
+        from memory.adhd_memory import ObsidianClient
+        client = ObsidianClient()
+        server_up = client.is_available()
+        vault_path = client.vault_path
+        note_count = len(list(vault_path.glob("*.md"))) if vault_path.exists() else 0
+        return {
+            "status": "ok",
+            "server_reachable": server_up,
+            "vault_path": str(vault_path),
+            "note_count": note_count,
+            "message": (
+                f"Obsidian server reachable, {note_count} notes in vault"
+                if server_up
+                else f"Obsidian server offline (vault has {note_count} notes on disk)"
+            ),
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "server_reachable": False,
+            "vault_path": "vault",
+            "note_count": 0,
+            "message": f"Obsidian check failed: {e}",
+        }
+
+
 # ---------- WebSocket Voice Streaming ----------
 
 @app.websocket("/ws/voice")

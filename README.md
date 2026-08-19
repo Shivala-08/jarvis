@@ -362,6 +362,10 @@ for e in events:
 - *"Access Not Configured"* — The Calendar API isn't enabled. Go back to step 2.
 - *Calendar events not showing* — Make sure you added your email as a test user in step 3.3.
 
-### D. Obsidian Integration (Phase 3.5) ❌ (Pending)
-* **State**: Not yet implemented.
-* **Todo**: Extend `memory/adhd_memory.py` to POST captured brain dumps to Obsidian's Local REST API as formatted notes, and create the Dataview query dashboard.
+### D. Obsidian Integration (Phase 3.5) ✅
+* **State**: `memory/adhd_memory.py` auto-writes brain dump notes to a local Obsidian vault.
+* **Mechanism**: `ObsidianClient` tries the Local REST API first, falls back to direct file write if the server is offline. One-directional: agents write, never read.
+* **Vault**: `vault/` directory with auto-generated `YYYY-MM-DD-HHmm.md` notes (frontmatter: tags, source_agent, status, timestamp).
+* **Dashboard**: `vault/Dashboard.md` with Dataview queries (today, this week, by tag, all captures).
+* **API**: `GET /api/obsidian` — vault status check (server reachable, note count).
+* **Config**: `config.toml [obsidian]` section — `enabled`, `base_url`, `vault_path`, `api_token`.

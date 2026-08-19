@@ -50,3 +50,7 @@ config/google_token.json
 *.sqlite
 data/
 *.log
+
+# Obsidian vault notes (auto-generated, keep Dashboard.md only)
+vault/*.md
+!vault/Dashboard.md
