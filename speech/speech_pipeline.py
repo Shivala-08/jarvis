@@ -8,6 +8,7 @@ Features:
 """
 import io
 import os
+import re
 import tempfile
 import time
 from pathlib import Path
@@ -16,6 +17,7 @@ from typing import Optional
 import numpy as np
 import sounddevice as sd
 import soundfile as sf
+import torch
 
 try:
     import toml
@@ -28,6 +30,7 @@ WHISPER_MODEL = SPEECH_CFG.get("whisper_model", "small.en")
 WHISPER_COMPUTE = SPEECH_CFG.get("whisper_compute_type", "int8")
 TTS_VOICE = SPEECH_CFG.get("tts_voice", "af_heart")
 TTS_SPEED = SPEECH_CFG.get("tts_speed", 1.05)
+TTS_SILENCE_SEC = float(SPEECH_CFG.get("tts_silence_sec", 0.25))
 
 
 # ---------------------------------------------------------------------------
@@ -121,9 +124,10 @@ class SpeechToText:
 class TextToSpeech:
     """Wrapper around Kokoro-82M for local speech synthesis."""
 
-    def __init__(self, voice: str = TTS_VOICE, speed: float = TTS_SPEED):
+    def __init__(self, voice: str = TTS_VOICE, speed: float = TTS_SPEED, silence_sec: float = TTS_SILENCE_SEC):
         self.voice = voice
         self.speed = speed
+        self.silence_sec = silence_sec
         self._pipeline = None
 
     @property
@@ -135,28 +139,66 @@ class TextToSpeech:
             print("  ✅ Kokoro TTS loaded.")
         return self._pipeline
 
-    def synthesize(self, text: str) -> np.ndarray:
-        """Convert text to audio samples."""
-        generator = self.pipeline(text, voice=self.voice, speed=self.speed)
-        all_audio = []
-        for _, _, audio in generator:
-            all_audio.append(audio)
-        if not all_audio:
-            return np.zeros(0, dtype=np.float32)
-        return np.concatenate(all_audio)
+    @staticmethod
+    def _split_sentences(text: str) -> list[str]:
+        """Split text into sentences on sentence-ending punctuation.
 
-    def speak(self, text: str, sample_rate: int = 24000):
+        Keeps the punctuation attached to the preceding sentence so Kokoro
+        produces natural prosody (falling intonation at period, rising at '?').
+        Falls back to the full text when no sentence boundaries are found.
+        """
+        parts = re.split(r'(?<=[.!?])\s+', text.strip())
+        return [p for p in parts if p] or [text.strip()]
+
+    SAMPLE_RATE = 24000  # Kokoro-82M native sample rate
+
+    def synthesize(self, text: str, silence_sec: Optional[float] = None) -> np.ndarray:
+        """Convert text to audio, synthesizing sentence-by-sentence.
+
+        Each sentence is generated independently so Kokoro applies proper
+        prosody (falling/rising intonation).  A short silence gap is
+        inserted between sentences to sound natural and give the listener
+        a brief cognitive pause — important for the calm, non-urgent tone
+        the ADHD co-processor aims for.
+
+        Args:
+            text: The text to synthesize.
+            silence_sec: Seconds of silence between sentences.
+                Defaults to the value from config.toml (tts_silence_sec).
+        """
+        if silence_sec is None:
+            silence_sec = self.silence_sec
+        sentences = self._split_sentences(text)
+        sr = self.SAMPLE_RATE
+        silence = np.zeros(int(sr * silence_sec), dtype=np.float32)
+
+        pieces: list[np.ndarray] = []
+        for i, sentence in enumerate(sentences):
+            for result in self.pipeline(sentence, voice=self.voice, speed=self.speed):
+                audio = result.audio
+                if isinstance(audio, torch.Tensor):
+                    audio = audio.cpu().numpy()
+                pieces.append(audio)
+            # Add silence gap between sentences (not after the last one)
+            if i < len(sentences) - 1:
+                pieces.append(silence)
+
+        if not pieces:
+            return np.zeros(0, dtype=np.float32)
+        return np.concatenate(pieces)
+
+    def speak(self, text: str):
         """Speak text aloud immediately."""
         print(f"  🔊 Speaking: {text[:80]}...")
         audio = self.synthesize(text)
         if len(audio) > 0:
-            sd.play(audio, samplerate=sample_rate)
+            sd.play(audio, samplerate=self.SAMPLE_RATE)
             sd.wait()
 
-    def synthesize_to_file(self, text: str, output_path: str, sample_rate: int = 24000):
+    def synthesize_to_file(self, text: str, output_path: str):
         """Save synthesized speech to a WAV file."""
         audio = self.synthesize(text)
-        sf.write(output_path, audio, sample_rate)
+        sf.write(output_path, audio, self.SAMPLE_RATE)
         print(f"  💾 Saved to {output_path}")
 
 

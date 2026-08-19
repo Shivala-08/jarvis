@@ -442,9 +442,13 @@
                         sample_rate: 16000,
                     }));
 
-                    // Set up MediaRecorder to capture audio
-                    // Use webm/opus for browser compat, we'll send raw PCM instead
-                    voiceAudioContext = new AudioContext({ sampleRate: 16000 });
+                    // Use AudioWorklet or ScriptProcessor to capture raw PCM
+                    // Chrome only supports 44100/48000 Hz, so we use the default
+                    // and resample to 16000 Hz before sending to the server
+                    voiceAudioContext = new AudioContext();
+                    const nativeRate = voiceAudioContext.sampleRate;  // typically 44100 or 48000
+                    const targetRate = 16000;
+                    const resampleRatio = nativeRate / targetRate;
                     const source = voiceAudioContext.createMediaStreamSource(voiceStream);
                     const processor = voiceAudioContext.createScriptProcessor(4096, 1, 1);
 
@@ -453,8 +457,18 @@
                     processor.onaudioprocess = (e) => {
                         if (!voiceWs || voiceWs.readyState !== WebSocket.OPEN) return;
                         const inputData = e.inputBuffer.getChannelData(0);
+                        // Simple linear interpolation resample to 16000 Hz
+                        const resampled = new Float32Array(Math.floor(inputData.length / resampleRatio));
+                        for (let i = 0; i < resampled.length; i++) {
+                            const srcIdx = i * resampleRatio;
+                            const idx = Math.floor(srcIdx);
+                            const frac = srcIdx - idx;
+                            resampled[i] = idx + 1 < inputData.length
+                                ? inputData[idx] * (1 - frac) + inputData[idx + 1] * frac
+                                : inputData[idx];
+                        }
                         // Convert float32 to base64
-                        const bytes = new Uint8Array(inputData.buffer);
+                        const bytes = new Uint8Array(resampled.buffer);
                         let binary = '';
                         for (let i = 0; i < bytes.length; i++) {
                             binary += String.fromCharCode(bytes[i]);
@@ -624,11 +638,24 @@
                 const color = status === 'clean' ? '#4ade80' : status === 'warning' ? '#fbbf24' : '#ef4444';
                 const icon = status === 'clean' ? '✅' : status === 'warning' ? '⚠️' : '❌';
                 let html = `<span style="color:${color};">${icon} ${data.message}</span>`;
-                if (data.connections && data.connections.length > 0) {
+                const allConns = [...(data.app_connections || []), ...(data.system_connections || [])];
+                if (allConns.length > 0) {
                     html += '<div style="margin-top:6px;">';
-                    data.connections.forEach(c => {
-                        html += `<div style="color:#fbbf24; font-size:0.8rem;">  → ${c.remote_ip}:${c.remote_port}</div>`;
-                    });
+                    if (data.app_connections && data.app_connections.length > 0) {
+                        html += '<div style="color:#ef4444; font-size:0.75rem; margin-bottom:2px;">App connections:</div>';
+                        data.app_connections.forEach(c => {
+                            html += `<div style="color:#fbbf24; font-size:0.8rem;">  → ${c.process}: ${c.remote_ip}:${c.remote_port}</div>`;
+                        });
+                    }
+                    if (data.system_connections && data.system_connections.length > 0) {
+                        html += '<div style="color:#888; font-size:0.75rem; margin-top:4px; margin-bottom:2px;">System connections:</div>';
+                        data.system_connections.slice(0, 10).forEach(c => {
+                            html += `<div style="color:#666; font-size:0.8rem;">  → ${c.process}: ${c.remote_ip}:${c.remote_port}</div>`;
+                        });
+                        if (data.system_connections.length > 10) {
+                            html += `<div style="color:#666; font-size:0.75rem;">  ... and ${data.system_connections.length - 10} more</div>`;
+                        }
+                    }
                     html += '</div>';
                 }
                 output.innerHTML = html;

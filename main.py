@@ -5,7 +5,7 @@ All local-first, zero cloud calls, zero paid API keys.
 
 Usage:
     uv run python main.py              # Interactive CLI mode
-    uv run python main.py --voice      # Voice interface mode
+    uv run python main.py --voice      # Voice interface + UI server
     uv run python main.py --ui         # Start local web UI server + API
     uv run python main.py --test       # Run integration tests
     uvicorn main:app --host localhost --port 8080   # ASGI entry point
@@ -641,13 +641,36 @@ def run_cli():
 # ---------------------------------------------------------------------------
 
 def run_voice():
-    """Voice interface mode."""
+    """Voice interface + UI server mode.
+
+    Starts the web dashboard at localhost:8080 and the voice pipeline
+    simultaneously so you can interact by voice and see state in the browser.
+    """
+    import uvicorn
     from speech.speech_pipeline import SpeechPipeline
     from agents.braindump_agent import process_braindump
     from memory.adhd_memory import ADHDMemoryEngine
-    from agents.scheduler_agent import generate_micro_sprint
 
     memory = ADHDMemoryEngine()
+
+    # Start UI server + body double daemon in background threads
+    start_body_double_daemon()
+    PORT = 8080
+    ui_thread = threading.Thread(
+        target=uvicorn.run,
+        args=(app,),
+        kwargs={"host": "localhost", "port": PORT, "log_level": "warning"},
+        daemon=True,
+        name="ui-server",
+    )
+    ui_thread.start()
+    print(f"🌐 UI server starting at http://localhost:{PORT}")
+    print("   (voice + UI running together — Ctrl+C to stop)")
+
+    # Give uvicorn a moment to bind
+    time.sleep(1.5)
+
+    # Initialize voice pipeline after server is up
     pipeline = SpeechPipeline()
 
     def handle_command(text: str) -> str:
@@ -655,7 +678,7 @@ def run_voice():
         if "brain dump" in text_lower or "dump" in text_lower:
             return "Let's do a brain dump. Speak for 15 seconds and I'll organize your thoughts."
         elif "schedule" in text_lower:
-            return "I'll show your schedule. Check the terminal for today's plan."
+            return "I'll show your schedule. Check the dashboard for today's plan."
         elif "study" in text_lower:
             return "What topic would you like me to break down into study steps?"
         elif "help" in text_lower:
@@ -981,7 +1004,7 @@ def run_tests():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="ADHD Co-Processor")
-    parser.add_argument("--voice", action="store_true", help="Voice interface mode")
+    parser.add_argument("--voice", action="store_true", help="Voice interface + UI server")
     parser.add_argument("--ui", action="store_true", help="Start local web UI server + API")
     parser.add_argument("--test", action="store_true", help="Run integration tests")
     args = parser.parse_args()
