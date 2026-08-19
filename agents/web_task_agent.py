@@ -32,8 +32,8 @@ try:
 except (FileNotFoundError, Exception):
     CONFIG = {}
 
-OLLAMA_CFG = CONFIG.get("engine", {}).get("ollama", {})
-DEFAULT_MODEL = OLLAMA_CFG.get("default_model", "llama3.1:latest")
+from core.config import get_default_model
+DEFAULT_MODEL = get_default_model()
 
 # Log directory for web task results
 LOG_DIR = Path("data/web_tasks")

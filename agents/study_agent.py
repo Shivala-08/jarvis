@@ -76,8 +76,11 @@ def validate_units(units: list[dict]) -> list[str]:
     return errors
 
 
-def decompose_topic(topic: str, model: str = "llama3.1:latest") -> dict:
+def decompose_topic(topic: str, model: str = None) -> dict:
     """Decompose a topic into micro-units. Auto-retries with smaller scope if validation fails."""
+    if model is None:
+        from core.config import get_default_model
+        model = get_default_model()
     response = ollama.chat(
         model=model,
         messages=[

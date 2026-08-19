@@ -104,20 +104,34 @@ def start_body_double_daemon():
 # FastAPI app — module level so `uvicorn main:app` works
 # ---------------------------------------------------------------------------
 
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+import os
+from core.auth import require_token
 
 app = FastAPI(title="ADHD Co-Processor API", version="0.2.0")
 
-# CORS for local dev
+# CORS setup
+allowed_origins_env = os.environ.get("JARVIS_ALLOWED_ORIGINS", "")
+if allowed_origins_env:
+    allowed_origins = [orig.strip() for orig in allowed_origins_env.split(",") if orig.strip()]
+else:
+    allowed_origins = [
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+        "http://localhost:8081",
+        "http://127.0.0.1:8081",
+    ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_credentials=True,
 )
 
 # ---------- Phase 11: PWA Routes ----------
@@ -237,6 +251,13 @@ def api_health():
     }
 
 
+@app.get("/api/diagnostics")
+def api_diagnostics():
+    """Retrieve model configurations and local AI tags diagnostics."""
+    from core.diagnostics import run_model_diagnostics
+    return run_model_diagnostics()
+
+
 @app.post("/api/braindump")
 def api_braindump(req: BrainDumpRequest):
     """Process a brain dump with latency tracking and conversation context."""
@@ -312,7 +333,7 @@ def api_schedule():
     return {"schedule": schedule, "alpha": alpha}
 
 
-@app.post("/api/rebalance")
+@app.post("/api/rebalance", dependencies=[Depends(require_token)])
 def api_rebalance(req: RebalanceRequest):
     """Rebalance schedule with event publishing."""
     from agents.scheduler_agent import build_schedule, rebalance, _estimate_alpha
@@ -381,7 +402,7 @@ def api_memory_search(req: SearchRequest):
     return {"results": results}
 
 
-@app.post("/api/purge")
+@app.post("/api/purge", dependencies=[Depends(require_token)])
 def api_purge():
     """Purge all memories."""
     memory = get_memory()
@@ -474,7 +495,7 @@ def api_get_conversation(conversation_id: str, limit: int = 20):
     }
 
 
-@app.delete("/api/conversations/{conversation_id}")
+@app.delete("/api/conversations/{conversation_id}", dependencies=[Depends(require_token)])
 def api_delete_conversation(conversation_id: str):
     """Delete a conversation."""
     conv_mem = get_conversation_memory()
@@ -484,7 +505,7 @@ def api_delete_conversation(conversation_id: str):
 
 # ---------- Task Completion Tracking endpoints ----------
 
-@app.post("/api/tasks/start")
+@app.post("/api/tasks/start", dependencies=[Depends(require_token)])
 def api_start_task(req: TaskCompletionRequest):
     """Record that a task has started."""
     tracker = get_task_tracker()
@@ -493,7 +514,7 @@ def api_start_task(req: TaskCompletionRequest):
     return {"status": "started", **result}
 
 
-@app.post("/api/tasks/complete")
+@app.post("/api/tasks/complete", dependencies=[Depends(require_token)])
 def api_complete_task(req: TaskCompletionRequest):
     """Record that a task has been completed."""
     tracker = get_task_tracker()
@@ -558,7 +579,7 @@ def api_skills():
     }
 
 
-@app.post("/api/skills/{skill_name}/invoke")
+@app.post("/api/skills/{skill_name}/invoke", dependencies=[Depends(require_token)])
 def api_invoke_skill(skill_name: str, args: dict = {}):
     """Invoke a skill by name."""
     try:
@@ -605,7 +626,7 @@ def api_list_scheduled_tasks():
     }
 
 
-@app.post("/api/scheduler/tasks")
+@app.post("/api/scheduler/tasks", dependencies=[Depends(require_token)])
 def api_create_scheduled_task(req: ScheduledTaskRequest):
     """Create a new scheduled task."""
     from core.cron_scheduler import get_scheduler
@@ -623,7 +644,7 @@ def api_create_scheduled_task(req: ScheduledTaskRequest):
     }
 
 
-@app.post("/api/scheduler/tasks/{task_id}/pause")
+@app.post("/api/scheduler/tasks/{task_id}/pause", dependencies=[Depends(require_token)])
 def api_pause_scheduled_task(task_id: str):
     """Pause a scheduled task."""
     from core.cron_scheduler import get_scheduler
@@ -632,7 +653,7 @@ def api_pause_scheduled_task(task_id: str):
     return {"success": success, "task_id": task_id}
 
 
-@app.post("/api/scheduler/tasks/{task_id}/resume")
+@app.post("/api/scheduler/tasks/{task_id}/resume", dependencies=[Depends(require_token)])
 def api_resume_scheduled_task(task_id: str):
     """Resume a scheduled task."""
     from core.cron_scheduler import get_scheduler
@@ -658,7 +679,7 @@ def api_monitor_stats():
 
 # ---------- Phase 14: Data Sovereignty endpoints ----------
 
-@app.get("/api/sovereignty/snapshot")
+@app.get("/api/sovereignty/snapshot", dependencies=[Depends(require_token)])
 def api_sovereignty_snapshot():
     """Take a single network snapshot and check for violations."""
     from core.sovereignty import SovereigntyMonitor
@@ -667,7 +688,7 @@ def api_sovereignty_snapshot():
 
 
 
-@app.get("/api/sovereignty/status")
+@app.get("/api/sovereignty/status", dependencies=[Depends(require_token)])
 def api_sovereignty_status():
     """Quick sovereignty status — instant snapshot, no waiting."""
     from core.sovereignty import SovereigntyMonitor
@@ -684,7 +705,7 @@ def api_sovereignty_status():
         "violation_details": result["violations"][:5],
     }
 
-@app.get("/api/sovereignty/report")
+@app.get("/api/sovereignty/report", dependencies=[Depends(require_token)])
 def api_sovereignty_report(duration_seconds: int = 30):
     """Run a sovereignty trace for N seconds and return full report."""
     from core.sovereignty import SovereigntyMonitor
@@ -697,7 +718,7 @@ def api_sovereignty_report(duration_seconds: int = 30):
     return monitor.report().to_dict()
 
 
-@app.post("/api/sovereignty/purge")
+@app.post("/api/sovereignty/purge", dependencies=[Depends(require_token)])
 def api_sovereignty_purge():
     """Purge ALL memory: Qdrant collection, task history, logs."""
     from core.sovereignty import purge_all_memory
@@ -734,7 +755,7 @@ def api_get_notifications(
     }
 
 
-@app.post("/api/notifications/send")
+@app.post("/api/notifications/send", dependencies=[Depends(require_token)])
 def api_send_notification(
     title: str,
     body: str,
@@ -750,7 +771,7 @@ def api_send_notification(
     }
 
 
-@app.post("/api/notifications/{notification_id}/read")
+@app.post("/api/notifications/{notification_id}/read", dependencies=[Depends(require_token)])
 def api_mark_read(notification_id: str):
     """Mark a notification as read."""
     from core.notifications import get_notification_manager
@@ -759,7 +780,7 @@ def api_mark_read(notification_id: str):
     return {"marked_read": success, "unread_count": manager.get_unread_count()}
 
 
-@app.post("/api/notifications/read-all")
+@app.post("/api/notifications/read-all", dependencies=[Depends(require_token)])
 def api_mark_all_read():
     """Mark all notifications as read."""
     from core.notifications import get_notification_manager
@@ -768,7 +789,7 @@ def api_mark_all_read():
     return {"marked_read": count, "unread_count": 0}
 
 
-@app.delete("/api/notifications")
+@app.delete("/api/notifications", dependencies=[Depends(require_token)])
 def api_clear_notifications():
     """Clear all notifications."""
     from core.notifications import get_notification_manager
@@ -785,7 +806,7 @@ def api_notification_preferences():
     return manager.get_preferences()
 
 
-@app.post("/api/notifications/preferences")
+@app.post("/api/notifications/preferences", dependencies=[Depends(require_token)])
 def api_update_notification_preferences(preferences: dict):
     """Update notification preferences."""
     from core.notifications import get_notification_manager
@@ -817,7 +838,7 @@ def api_calendar_today():
     }
 
 
-@app.post("/api/calendar/sync")
+@app.post("/api/calendar/sync", dependencies=[Depends(require_token)])
 def api_calendar_sync():
     """Sync task schedule to Google Calendar."""
     from agents.calendar_sync import CalendarSync
@@ -841,7 +862,7 @@ def api_calendar_sync():
     return result
 
 
-@app.post("/api/calendar/clear")
+@app.post("/api/calendar/clear", dependencies=[Depends(require_token)])
 def api_calendar_clear():
     """Clear all copilot events from today's calendar."""
     from agents.calendar_sync import CalendarSync
@@ -858,7 +879,7 @@ class CodeRequest(BaseModel):
     action: str = "auto"  # fix, add, explain, refactor, review
 
 
-@app.post("/api/code")
+@app.post("/api/code", dependencies=[Depends(require_token)])
 def api_code(req: CodeRequest):
     """Coding assistant — fix bugs, add features, explain code."""
     from agents.coding_agent import CodeAssistant
@@ -903,7 +924,7 @@ def api_code(req: CodeRequest):
     return result
 
 
-@app.post("/api/code/apply")
+@app.post("/api/code/apply", dependencies=[Depends(require_token)])
 def api_code_apply(result: dict, dry_run: bool = True):
     """Apply code changes from a coding assistant result."""
     from agents.coding_agent import CodeAssistant
@@ -920,7 +941,7 @@ class WebTaskRequest(BaseModel):
     action: str = "auto"  # search, scrape, task
 
 
-@app.post("/api/web-task")
+@app.post("/api/web-task", dependencies=[Depends(require_token)])
 def api_web_task(req: WebTaskRequest):
     """Web task agent — search, scrape, or complete web tasks."""
     from agents.web_task_agent import WebTaskAgent
@@ -976,7 +997,7 @@ def api_network_check():
         app_connections = []
         system_connections = []
         google_prefixes = ("142.250.", "172.217.", "74.125.", "216.58.", "173.194.", "209.85.")
-        app_names = {"python", "python3", "uvicorn", "ollama", "qdrant"}
+        app_names = {"python", "python3", "uvicorn"}
         my_pid = os.getpid()
 
         # Use lsof to list established TCP connections with process info
@@ -1140,6 +1161,14 @@ def api_obsidian_status():
 async def ws_voice(websocket: WebSocket):
     """WebSocket endpoint for real-time voice streaming."""
     import base64
+
+    token = websocket.query_params.get("token")
+    expected_token = os.environ.get("ADHD_COPILOT_TOKEN", "")
+    if expected_token and token != expected_token:
+        await websocket.accept()
+        await websocket.send_json({"type": "error", "text": "Unauthorized: Invalid or missing API token"})
+        await websocket.close(code=4003)
+        return
 
     await websocket.accept()
     print("🔌 WebSocket voice client connected")
@@ -1354,6 +1383,8 @@ if (UI_DIR / "static").exists():
 
 def run_cli():
     """Interactive CLI mode."""
+    from core.diagnostics import print_diagnostics_report
+    print_diagnostics_report()
     from agents.braindump_agent import process_braindump
     from memory.adhd_memory import ADHDMemoryEngine
     from agents.scheduler_agent import build_schedule, rebalance, generate_micro_sprint, _estimate_alpha
@@ -1657,9 +1688,28 @@ def run_cli():
 # Voice mode
 # ---------------------------------------------------------------------------
 
+def _get_bind_host() -> str:
+    """Helper to determine the bind host safely.
+
+    Only binds to 0.0.0.0 (remote access) if ADHD_COPILOT_TOKEN is configured.
+    """
+    token_configured = bool(os.environ.get("ADHD_COPILOT_TOKEN", ""))
+    remote_mode = os.environ.get("JARVIS_REMOTE", "").lower() == "true" or os.environ.get("JARVIS_HOST") == "0.0.0.0"
+    
+    if remote_mode:
+        if not token_configured:
+            print("🚨 SECURITY WARNING: Remote mode (binding to 0.0.0.0) requested but ADHD_COPILOT_TOKEN is not set.")
+            print("   For security reasons, binding to localhost instead.")
+            return "localhost"
+        return "0.0.0.0"
+    return "localhost"
+
+
 def run_voice():
     """Voice interface + UI server mode."""
     import uvicorn
+    from core.diagnostics import print_diagnostics_report
+    print_diagnostics_report()
     from speech.speech_pipeline import SpeechPipeline
     from agents.braindump_agent import process_braindump
     from memory.adhd_memory import ADHDMemoryEngine
@@ -1672,15 +1722,16 @@ def run_voice():
     # Start UI server + body double daemon in background threads
     start_body_double_daemon()
     PORT = 8080
+    bind_host = _get_bind_host()
     ui_thread = threading.Thread(
         target=uvicorn.run,
         args=(app,),
-        kwargs={"host": "localhost", "port": PORT, "log_level": "warning"},
+        kwargs={"host": bind_host, "port": PORT, "log_level": "warning"},
         daemon=True,
         name="ui-server",
     )
     ui_thread.start()
-    print(f"🌐 UI server starting at http://localhost:{PORT}")
+    print(f"🌐 UI server starting at http://{bind_host}:{PORT}")
     print("   (voice + UI running together — Ctrl+C to stop)")
 
     # Give uvicorn a moment to bind
@@ -1722,6 +1773,8 @@ def run_voice():
 def run_ui_server():
     """Start FastAPI backend + serve static UI files + background services."""
     import uvicorn
+    from core.diagnostics import print_diagnostics_report
+    print_diagnostics_report()
 
     # Start background services
     start_body_double_daemon()
@@ -1730,17 +1783,18 @@ def run_ui_server():
     start_scheduler()
 
     PORT = 8080
-    print(f"🌐 ADHD Co-Processor API running at http://localhost:{PORT}")
-    print(f"   UI: http://localhost:{PORT}")
-    print(f"   API docs: http://localhost:{PORT}/docs")
-    print(f"   Health: http://localhost:{PORT}/api/health")
-    print(f"   Skills: http://localhost:{PORT}/api/skills")
-    print(f"   Dashboard: http://localhost:{PORT}/api/dashboard")
+    bind_host = _get_bind_host()
+    print(f"🌐 ADHD Co-Processor API running at http://{bind_host}:{PORT}")
+    print(f"   UI: http://{bind_host}:{PORT}")
+    print(f"   API docs: http://{bind_host}:{PORT}/docs")
+    print(f"   Health: http://{bind_host}:{PORT}/api/health")
+    print(f"   Skills: http://{bind_host}:{PORT}/api/skills")
+    print(f"   Dashboard: http://{bind_host}:{PORT}/api/dashboard")
     print("   Body Double daemon: active")
     print("   Memory Service: active")
     print("   Cron Scheduler: active")
     print("   Press Ctrl+C to stop.")
-    uvicorn.run(app, host="localhost", port=PORT, log_level="info")
+    uvicorn.run(app, host=bind_host, port=PORT, log_level="info")
 
 
 # ---------------------------------------------------------------------------
@@ -2225,6 +2279,66 @@ def run_tests():
         passed += 1
     except Exception as e:
         print(f"  ❌ FastAPI calendar status — {e}")
+        failed += 1
+
+    # Test 31: Path Traversal checks (Phase 1 Security)
+    try:
+        from agents.coding_agent import _safe_resolve
+        # Safe relative resolve
+        safe_path = _safe_resolve("main.py")
+        assert safe_path.name == "main.py", "Failed to resolve relative path correctly"
+        
+        # Absolute path block
+        try:
+            _safe_resolve("/etc/passwd")
+            raise AssertionError("Absolute path resolution should be blocked")
+        except ValueError:
+            pass
+            
+        # Traversal block
+        try:
+            _safe_resolve("../../etc/passwd")
+            raise AssertionError("Directory traversal path should be blocked")
+        except ValueError:
+            pass
+            
+        print("  ✅ Path traversal protection checks — OK")
+        passed += 1
+    except Exception as e:
+        print(f"  ❌ Path traversal protection checks — {e}")
+        failed += 1
+
+    # Test 32: API Token Auth checks (Phase 1 Security)
+    try:
+        from fastapi.testclient import TestClient
+        # Cache existing env var
+        orig_token = os.environ.get("ADHD_COPILOT_TOKEN")
+        os.environ["ADHD_COPILOT_TOKEN"] = "integration_test_secret_token"
+        
+        client = TestClient(app)
+        
+        # 1. Missing Token -> 401
+        r_missing = client.post("/api/purge")
+        assert r_missing.status_code == 401, f"Missing token should yield 401, got {r_missing.status_code}"
+        
+        # 2. Invalid Token -> 401
+        r_invalid = client.post("/api/purge", headers={"X-API-Token": "incorrect_token"})
+        assert r_invalid.status_code == 401, f"Invalid token should yield 401, got {r_invalid.status_code}"
+        
+        # 3. Valid Token -> 200 (runs purge successfully)
+        r_valid = client.post("/api/purge", headers={"X-API-Token": "integration_test_secret_token"})
+        assert r_valid.status_code == 200, f"Valid token should yield 200, got {r_valid.status_code}"
+        
+        # Restore env var
+        if orig_token is None:
+            del os.environ["ADHD_COPILOT_TOKEN"]
+        else:
+            os.environ["ADHD_COPILOT_TOKEN"] = orig_token
+            
+        print("  ✅ API Token security checks — OK")
+        passed += 1
+    except Exception as e:
+        print(f"  ❌ API Token security checks — {e}")
         failed += 1
 
     print(f"\n{'='*40}")

@@ -130,8 +130,9 @@ class FocusMonitor:
         # Use Ollama for a contextual nudge if available
         if HAS_OLLAMA:
             try:
+                from core.config import get_default_model
                 response = ollama.chat(
-                    model="llama3.1:latest",
+                    model=get_default_model(),
                     messages=[
                         {
                             "role": "system",

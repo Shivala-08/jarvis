@@ -140,20 +140,15 @@ def setup_pwa_routes(app: FastAPI) -> None:
 
     @app.websocket("/ws/pwa")
     async def ws_pwa(websocket: WebSocket):
-        """WebSocket endpoint for PWA voice streaming.
+        token = websocket.query_params.get("token")
+        import os
+        expected_token = os.environ.get("ADHD_COPILOT_TOKEN", "")
+        if expected_token and token != expected_token:
+            await websocket.accept()
+            await websocket.send_json({"type": "error", "text": "Unauthorized: Invalid or missing API token"})
+            await websocket.close(code=4003)
+            return
 
-        Protocol:
-          Client → Server:
-            {"type": "start", "sample_rate": 16000}
-            {"type": "audio", "data": "<base64 PCM float32>"}
-            {"type": "stop"}
-            {"type": "command", "text": "..."}
-          Server → Client:
-            {"type": "status", "text": "..."}
-            {"type": "transcript", "text": "..."}
-            {"type": "response", "text": "..."}
-            {"type": "response_audio", "data": "<base64 PCM>", "sample_rate": 24000}
-        """
         await _manager.connect(websocket)
 
         audio_chunks = []

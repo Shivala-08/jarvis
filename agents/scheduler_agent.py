@@ -231,8 +231,11 @@ def rebalance(
 # Micro-sprint generator
 # ---------------------------------------------------------------------------
 
-def generate_micro_sprint(task_text: str, model: str = "llama3.1:latest") -> str:
+def generate_micro_sprint(task_text: str, model: str = None) -> str:
     """Generate a spoken calm micro-sprint prompt for the current task."""
+    if model is None:
+        from core.config import get_default_model
+        model = get_default_model()
     response = ollama.chat(
         model=model,
         messages=[

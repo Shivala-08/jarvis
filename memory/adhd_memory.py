@@ -105,11 +105,12 @@ class ObsidianClient:
     def __init__(
         self,
         base_url: str = OBSIDIAN_CFG.get("base_url", "http://localhost:27124"),
-        api_token: str = OBSIDIAN_CFG.get("api_token", ""),
+        api_token: str = None,
         vault_path: str = OBSIDIAN_CFG.get("vault_path", "vault"),
     ):
+        import os
         self.base_url = base_url.rstrip("/")
-        self.api_token = api_token
+        self.api_token = api_token or os.environ.get("OBSIDIAN_API_TOKEN") or OBSIDIAN_CFG.get("api_token", "")
         self.vault_path = Path(vault_path)
         self.vault_path.mkdir(parents=True, exist_ok=True)
         self._server_available: Optional[bool] = None

@@ -18,7 +18,7 @@ node_modules/
 .nuxt/
 
 # Tauri
-src-tauri/target/
+**/src-tauri/target/
 
 # Qdrant
 qdrant_data/

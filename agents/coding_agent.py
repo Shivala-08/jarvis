@@ -32,8 +32,8 @@ try:
 except (FileNotFoundError, Exception):
     CONFIG = {}
 
-OLLAMA_CFG = CONFIG.get("engine", {}).get("ollama", {})
-DEFAULT_MODEL = OLLAMA_CFG.get("default_model", "llama3.1:latest")
+from core.config import get_coding_model
+DEFAULT_MODEL = get_coding_model()
 
 # Project root for file context
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -43,12 +43,30 @@ PROJECT_ROOT = Path(__file__).parent.parent
 # Code analysis helpers
 # ---------------------------------------------------------------------------
 
+def _safe_resolve(file_path: str) -> Path:
+    """Resolve the path safely, preventing traversal and symlink escapes outside PROJECT_ROOT."""
+    path_obj = Path(file_path)
+    if path_obj.is_absolute():
+        raise ValueError(f"Absolute paths not allowed: {file_path}")
+    
+    # Check for direct traversal patterns in string to fail fast
+    normalized_str = str(path_obj)
+    if ".." in normalized_str.split(os.sep):
+        raise ValueError(f"Directory traversal patterns not allowed: {file_path}")
+        
+    combined = PROJECT_ROOT / path_obj
+    resolved_path = combined.resolve()
+    
+    if not resolved_path.is_relative_to(PROJECT_ROOT.resolve()):
+        raise ValueError(f"Unsafe path traversal detected: {file_path}")
+        
+    return resolved_path
+
+
 def _read_file(path: str, max_lines: int = 500) -> str:
     """Read a file and return its content, truncated to max_lines."""
     try:
-        file_path = Path(path)
-        if not file_path.is_absolute():
-            file_path = PROJECT_ROOT / path
+        file_path = _safe_resolve(path)
         if not file_path.exists():
             return f"[File not found: {path}]"
         lines = file_path.read_text(encoding="utf-8", errors="replace").splitlines()
@@ -317,7 +335,6 @@ class CodeAssistant:
 
         applied = []
         errors = []
-
         for change in changes:
             file_path = change.get("path", "")
             old_code = change.get("old_code", "")
@@ -326,7 +343,14 @@ class CodeAssistant:
             if not file_path or not new_code:
                 continue
 
-            full_path = PROJECT_ROOT / file_path
+            try:
+                full_path = _safe_resolve(file_path)
+            except ValueError as e:
+                errors.append({
+                    "file": file_path,
+                    "error": str(e),
+                })
+                continue
 
             if dry_run:
                 applied.append({

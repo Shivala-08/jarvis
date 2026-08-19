@@ -12,7 +12,12 @@
 // Config
 // ---------------------------------------------------------------------------
 
-const WS_URL = `ws://${window.location.host}/ws/pwa`;
+const getWsUrl = () => {
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const token = localStorage.getItem('ADHD_COPILOT_TOKEN') || '';
+  const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
+  return `${proto}//${window.location.host}/ws/pwa${tokenParam}`;
+};
 const SAMPLE_RATE = 16000;
 
 // ---------------------------------------------------------------------------
@@ -30,7 +35,7 @@ let reconnectTimer = null;
 // ---------------------------------------------------------------------------
 
 function connect() {
-  ws = new WebSocket(WS_URL);
+  ws = new WebSocket(getWsUrl());
 
   ws.onopen = () => {
     console.log('🔌 WebSocket connected');

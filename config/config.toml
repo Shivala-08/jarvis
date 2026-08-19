@@ -1,12 +1,12 @@
 [engine.ollama]
 base_url = "http://localhost:11434"
-default_model = "llama3.1:latest"
+default_model = "qwen3.5:9b"
 embedding_model = "nomic-embed-text"
-fallback_model = "llama3.1:8b"
+fallback_model = "qwen3.5:9b"
 
 [engine.ollama.models]
-reasoning = "llama3.1:latest"
-coding = "llama3.1:latest"
+reasoning = "qwen3.5:9b"
+coding = "qwen3.5:9b"
 embedding = "nomic-embed-text"
 
 [speech]

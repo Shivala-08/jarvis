@@ -34,7 +34,7 @@ Rules:
 """
 
 
-def process_braindump(raw_text: str, model: str = "llama3.1:latest", context: str = None) -> dict:
+def process_braindump(raw_text: str, model: str = None, context: str = None) -> dict:
     """Send raw text to Ollama and return structured JSON.
 
     Args:
@@ -44,6 +44,9 @@ def process_braindump(raw_text: str, model: str = "llama3.1:latest", context: st
 
     Returns a fallback structure if Ollama returns empty or invalid JSON.
     """
+    if model is None:
+        from core.config import get_default_model
+        model = get_default_model()
     # Build user message with optional context
     user_content = raw_text
     if context:

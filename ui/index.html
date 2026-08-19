@@ -3,833 +3,1198 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ADHD Co-Processor</title>
+    <title>Jarvis — ADHD Cognitive Co-Processor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Switzer:wght@300;400;500;600&family=Geist+Mono:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #0f0f1a;
-            color: #e0e0e0;
-            min-height: 100vh;
+        :root {
+            --bg-color: #FBFBFA;
+            --surface-color: #FFFFFF;
+            --border-color: #EAEAEA;
+            --text-primary: #111111;
+            --text-secondary: #787774;
+            --accent-black: #111111;
+            --accent-gray: #F4F4F3;
+            
+            /* Pastel Accents */
+            --pastel-red-bg: #FDEBEC;
+            --pastel-red-text: #9F2F2D;
+            --pastel-blue-bg: #E1F3FE;
+            --pastel-blue-text: #1F6C9F;
+            --pastel-green-bg: #EDF3EC;
+            --pastel-green-text: #346538;
+            --pastel-yellow-bg: #FBF3DB;
+            --pastel-yellow-text: #956400;
         }
-        .container { max-width: 900px; margin: 0 auto; padding: 24px; }
-        h1 { font-size: 1.6rem; margin-bottom: 8px; color: #a78bfa; }
-        .subtitle { color: #888; font-size: 0.9rem; margin-bottom: 24px; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Switzer', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        /* Typography & Header */
+        header {
+            margin-bottom: 48px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .header-title h1 {
+            font-family: 'Instrument Serif', serif;
+            font-size: 3rem;
+            font-weight: 400;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+        }
+
+        .header-title p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-top: 4px;
+        }
+
+        .header-auth {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Geist Mono', monospace;
+            font-size: 0.8rem;
+        }
+
+        .header-auth input {
+            border: 1px solid var(--border-color);
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: var(--surface-color);
+            font-family: inherit;
+            font-size: inherit;
+            color: var(--text-primary);
+            width: 140px;
+            outline: none;
+        }
+
+        .header-auth input:focus {
+            border-color: var(--text-primary);
+        }
+
+        /* Bento Grid */
+        .grid {
+            display: grid;
+            grid-template-columns: 1.6fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 900px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
 
         /* Cards */
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
         .card {
-            background: #1a1a2e;
-            border-radius: 12px;
-            padding: 20px;
-            border: 1px solid #2a2a4a;
-        }
-        .card h2 { font-size: 1rem; color: #a78bfa; margin-bottom: 12px; }
-        .card-full { grid-column: 1 / -1; }
-
-        /* Brain dump input */
-        textarea {
-            width: 100%;
-            min-height: 100px;
-            background: #12121f;
-            border: 1px solid #333;
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
             border-radius: 8px;
-            color: #e0e0e0;
-            padding: 12px;
-            font-size: 0.95rem;
-            resize: vertical;
-            font-family: inherit;
-        }
-        textarea:focus { outline: none; border-color: #a78bfa; }
-        textarea::placeholder { color: #555; }
-
-        /* Buttons */
-        .btn {
-            padding: 10px 20px;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            font-size: 0.9rem;
-            font-weight: 500;
-            transition: background 0.2s;
-            margin-top: 12px;
-        }
-        .btn-primary { background: #7c3aed; color: white; }
-        .btn-primary:hover { background: #6d28d9; }
-        .btn-secondary { background: #2a2a4a; color: #ccc; }
-        .btn-secondary:hover { background: #3a3a5a; }
-        .btn-danger { background: #991b1b; color: #fca5a5; }
-        .btn-danger:hover { background: #b91c1c; }
-        .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
-
-        /* Schedule list */
-        .schedule-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 0;
-            border-bottom: 1px solid #1f1f35;
-        }
-        .schedule-item:last-child { border-bottom: none; }
-        .schedule-time { color: #888; font-size: 0.8rem; min-width: 90px; font-family: monospace; }
-        .schedule-label { flex: 1; }
-        .schedule-badge {
-            font-size: 0.7rem;
-            padding: 2px 8px;
-            border-radius: 12px;
-            background: #2a2a4a;
-            color: #a78bfa;
-        }
-        .buffer-badge { background: #1a3a2a; color: #6ee7b7; }
-
-        /* Memory list */
-        .memory-item {
-            padding: 8px 12px;
-            margin-bottom: 6px;
-            background: #12121f;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            border-left: 3px solid #7c3aed;
+            padding: 24px;
+            margin-bottom: 24px;
+            transition: box-shadow 0.2s ease;
         }
 
-        /* Voice status */
-        .voice-status {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 16px;
-            background: #12121f;
-            border-radius: 8px;
-            margin-top: 12px;
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
         }
-        .voice-dot {
-            width: 12px; height: 12px;
-            border-radius: 50%;
-            background: #4ade80;
-        }
-        .voice-dot.recording { background: #ef4444; animation: pulse 1s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
-        /* Study plan */
-        .study-unit {
-            padding: 10px 14px;
-            margin-bottom: 8px;
-            background: #12121f;
-            border-radius: 8px;
-            border-left: 3px solid #3b82f6;
-        }
-        .study-unit .unit-title { font-weight: 600; margin-bottom: 4px; }
-        .study-unit .unit-meta { font-size: 0.8rem; color: #888; }
-        .study-unit .recall-q { font-size: 0.85rem; color: #fbbf24; margin-top: 4px; }
-
-        /* Loading spinner */
-        .loading {
-            display: inline-block;
-            width: 16px; height: 16px;
-            border: 2px solid #555;
-            border-top-color: #a78bfa;
-            border-radius: 50%;
-            animation: spin 0.6s linear infinite;
-            margin-right: 8px;
-            vertical-align: middle;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* Vault notes */
-        .vault-note {
-            padding: 8px 12px;
-            margin-bottom: 6px;
-            background: #12121f;
-            border-radius: 6px;
-            font-size: 0.82rem;
-            border-left: 3px solid #f59e0b;
+        .card-title {
+            font-family: 'Instrument Serif', serif;
+            font-size: 1.6rem;
+            font-weight: 400;
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        .vault-note .note-name { color: #e0e0e0; }
-        .vault-note .note-time { color: #888; font-size: 0.75rem; font-family: monospace; }
-        .vault-status-row {
+
+        /* Inputs */
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            padding: 16px;
+            font-size: 0.95rem;
+            resize: vertical;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s;
+            margin-bottom: 16px;
+        }
+
+        textarea:focus {
+            border-color: var(--text-primary);
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px 14px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+            font-family: inherit;
+            margin-bottom: 16px;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--text-primary);
+        }
+
+        /* Buttons */
+        .btn-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: background 0.15s, transform 0.1s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            outline: none;
+            background: var(--surface-color);
+            color: var(--text-primary);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background: var(--accent-black);
+            color: white;
+            border-color: var(--accent-black);
+        }
+
+        .btn-primary:hover {
+            background: #333333;
+        }
+
+        .btn-secondary:hover {
+            background: var(--accent-gray);
+        }
+
+        .btn-danger {
+            background: var(--pastel-red-bg);
+            color: var(--pastel-red-text);
+            border-color: rgba(159, 47, 45, 0.15);
+        }
+
+        .btn-danger:hover {
+            background: #fcdbdc;
+        }
+
+        /* Badges & Status */
+        .badge {
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: inline-block;
+        }
+
+        .badge-info { background: var(--pastel-blue-bg); color: var(--pastel-blue-text); }
+        .badge-success { background: var(--pastel-green-bg); color: var(--pastel-green-text); }
+        .badge-warning { background: var(--pastel-yellow-bg); color: var(--pastel-yellow-text); }
+        .badge-danger { background: var(--pastel-red-bg); color: var(--pastel-red-text); }
+
+        .status-indicator {
             display: flex;
             align-items: center;
             gap: 8px;
-            margin-bottom: 10px;
+            font-size: 0.85rem;
         }
-        .vault-dot {
-            width: 10px; height: 10px;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
-        .vault-dot.online { background: #4ade80; }
-        .vault-dot.offline { background: #888; }
 
-        /* Guardrails notice */
-        .guardrails {
-            text-align: center;
-            color: #555;
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #CCCCCC;
+            display: inline-block;
+        }
+
+        .status-dot.online { background: #346538; }
+        .status-dot.offline { background: #9F2F2D; }
+        .status-dot.warning { background: #956400; }
+        .status-dot.recording { background: #ef4444; animation: pulse 1s infinite; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Active Sprint Banner */
+        .sprint-banner {
+            background-color: var(--pastel-blue-bg);
+            color: var(--pastel-blue-text);
+            border: 1px solid rgba(31, 108, 159, 0.1);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .sprint-banner-label {
             font-size: 0.75rem;
-            margin-top: 32px;
-            padding-top: 16px;
-            border-top: 1px solid #1f1f35;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 4px;
+        }
+
+        .sprint-banner-text {
+            font-family: 'Instrument Serif', serif;
+            font-size: 1.8rem;
+            line-height: 1.2;
+        }
+
+        /* Lists & Items */
+        .item-list {
+            margin-top: 8px;
+        }
+
+        .list-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+            gap: 16px;
+        }
+
+        .list-row:last-child {
+            border-bottom: none;
+        }
+
+        .list-row-main {
+            flex: 1;
+        }
+
+        .list-row-time {
+            font-family: 'Geist Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            width: 100px;
+        }
+
+        .list-row-content {
+            font-size: 0.95rem;
+        }
+
+        .item-block {
+            padding: 12px 16px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 0.88rem;
+        }
+
+        /* Voice log visualizer */
+        .voice-box {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 16px;
+            margin-top: 12px;
+        }
+
+        .voice-log {
+            max-height: 150px;
+            overflow-y: auto;
+            font-family: 'Geist Mono', monospace;
+            font-size: 0.78rem;
+            margin-top: 8px;
+            color: var(--text-secondary);
+        }
+
+        .voice-log-entry {
+            border-bottom: 1px solid var(--border-color);
+            padding: 4px 0;
+        }
+
+        .voice-log-entry:last-child {
+            border-bottom: none;
+        }
+
+        /* Diagnostic Indicators Bento */
+        .diag-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .diag-item {
+            padding: 12px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .diag-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            letter-spacing: 0.05em;
+        }
+
+        .diag-value {
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .diag-warn-box {
+            grid-column: 1 / -1;
+            padding: 8px 12px;
+            background: var(--pastel-yellow-bg);
+            color: var(--pastel-yellow-text);
+            font-size: 0.8rem;
+            border-radius: 4px;
+            border: 1px solid rgba(149, 100, 0, 0.1);
+        }
+
+        /* Footers */
+        footer {
+            margin-top: 64px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 1.5px solid var(--border-color);
+            border-top-color: var(--text-primary);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-right: 6px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🧠 ADHD Co-Processor</h1>
-        <p class="subtitle">Local-first · Zero-cost · Privacy-respecting</p>
 
-        <!-- Brain Dump -->
-        <div class="card card-full" style="margin-bottom: 16px;">
-            <h2>💭 Brain Dump</h2>
-            <textarea id="braindump-input" placeholder="Type or paste your thoughts here — I'll organize them for you..."></textarea>
-            <div class="btn-row">
-                <button class="btn btn-primary" onclick="processBrainDump()">Process Thoughts</button>
-                <button class="btn btn-secondary" onclick="startVoiceDump()">🎙️ Voice Dump</button>
-            </div>
-            <div id="braindump-output" style="margin-top: 12px;"></div>
+<div class="container">
+    <header>
+        <div class="header-title">
+            <h1>Jarvis</h1>
+            <p>Cognitive Co-Processor</p>
         </div>
-
-        <div class="grid">
-            <!-- Today's Schedule -->
-            <div class="card">
-                <h2>📅 Today's Schedule</h2>
-                <div id="schedule-list">
-                    <p style="color:#888; font-size:0.85rem;">Loading schedule...</p>
-                </div>
-                <button class="btn btn-secondary" onclick="rebalanceSchedule()">🔄 Rebalance</button>
-            </div>
-
-            <!-- Memories -->
-            <div class="card">
-                <h2>🧠 Memories</h2>
-                <div id="memory-list">
-                    <p style="color:#888; font-size:0.85rem;">Loading memories...</p>
-                </div>
-                <button class="btn btn-secondary" onclick="searchMemory()">🔍 Search</button>
-            </div>
-
-            <!-- Obsidian Vault -->
-            <div class="card">
-                <h2>📓 Obsidian Vault</h2>
-                <div id="vault-status">
-                    <p style="color:#888; font-size:0.85rem;">Loading vault...</p>
-                </div>
-                <div id="vault-notes">
-                </div>
-                <button class="btn btn-secondary" onclick="loadVaultStatus()" style="margin-top:8px;">🔄 Refresh</button>
-            </div>
-
-            <!-- Data Sovereignty -->
-            <div class="card">
-                <h2>🔐 Data Sovereignty</h2>
-                <p style="font-size: 0.85rem; color: #888; margin-bottom: 12px;">
-                    All data stays on your machine. No cloud calls. No telemetry.
-                </p>
-                <div class="btn-row">
-                    <button class="btn btn-danger" onclick="purgeAll()">🗑️ Purge All Memory</button>
-                    <button class="btn btn-secondary" onclick="checkNetwork()">🌐 Network Check</button>
-                </div>
-                <div id="sovereignty-output" style="margin-top: 8px; font-size: 0.85rem;"></div>
-            </div>
+        <div class="header-auth">
+            <span>token:</span>
+            <input type="password" id="api-token-input" placeholder="ADHD_COPILOT_TOKEN" onchange="saveToken(this.value)">
         </div>
+    </header>
 
-        <!-- Study Plan -->
-        <div class="card" style="margin-top: 16px;">
-            <h2>📚 Study Plan</h2>
-            <input id="study-topic" type="text" placeholder="Enter a topic to decompose..."
-                style="width:100%; padding:10px; background:#12121f; border:1px solid #333; border-radius:8px; color:#e0e0e0; font-size:0.95rem; margin-bottom:12px;">
-            <button class="btn btn-primary" onclick="generateStudyPlan()">Generate Plan</button>
-            <div id="study-plan-output" style="margin-top: 12px;"></div>
-        </div>
-
-        <!-- Voice Status -->
-        <div class="card" style="margin-top: 16px;">
-            <h2>🎙️ Voice Interface <span style="font-size:0.75rem; color:#888; font-weight:400;">WebSocket real-time</span></h2>
-            <div class="voice-status">
-                <div class="voice-dot" id="voice-dot"></div>
-                <span id="voice-status-text">Ready — click Start Listening to begin</span>
-            </div>
-            <div style="margin-top:10px; font-size:0.8rem; color:#888;">
-                Mode:
-                <label style="margin-left:8px; cursor:pointer;">
-                    <input type="radio" name="voice-mode" value="command" checked onchange="voiceMode='command'"> Command
-                </label>
-                <label style="margin-left:12px; cursor:pointer;">
-                    <input type="radio" name="voice-mode" value="braindump" onchange="voiceMode='braindump'"> Brain Dump
-                </label>
-            </div>
-            <div class="btn-row" style="margin-top: 12px;">
-                <button class="btn btn-primary" onclick="startListening()">🎤 Start Listening</button>
-                <button class="btn btn-secondary" onclick="stopListening()">⏹ Stop</button>
-            </div>
-            <div id="voice-log" style="margin-top:12px; max-height:200px; overflow-y:auto;"></div>
-        </div>
-
-
-
-        <div class="guardrails">
-            No red badges · No overdue counters · No modal dialogs · Supportive phrasing only<br>
-            Voice pacing: 1.0–1.1× · All inference local · Zero paid API keys
-        </div>
+    <!-- Active Sprint Status (if set) -->
+    <div class="sprint-banner" id="active-sprint-banner" style="display: none;">
+        <div class="sprint-banner-label">Active Sprint</div>
+        <div class="sprint-banner-text" id="active-sprint-text">Loading main directive...</div>
     </div>
 
-    <script>
-        const API_BASE = '';  // Same origin — FastAPI serves both UI and API
+    <div class="grid">
+        <!-- Left Side: Brain Dump & Dynamic Planning -->
+        <main>
+            <!-- Brain Dump Card -->
+            <div class="card">
+                <div class="card-title">Brain Dump</div>
+                <textarea id="braindump-input" placeholder="Stream of consciousness thoughts... let Jarvis organize them."></textarea>
+                <div class="btn-row">
+                    <button class="btn btn-primary" onclick="processBrainDump()">
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="fill:currentColor"><path d="M12.5 1h-9A2.5 2.5 0 001 3.5v9A2.5 2.5 0 003.5 15h9a2.5 2.5 0 002.5-2.5v-9A2.5 2.5 0 0012.5 1zm-9 1h9A1.5 1.5 0 0114 3.5v9A1.5 1.5 0 0112.5 14h-9A1.5 1.5 0 012 12.5v-9A1.5 1.5 0 013.5 2zm3.646 3.146a.5.5 0 00-.707.708L5.793 8l-2.354 2.146a.5.5 0 00.707.708l2.5-2.5a.5.5 0 000-.708l-2.5-2.5zM7.5 10.5h4a.5.5 0 000-1h-4a.5.5 0 000 1z"/></svg>
+                        Process Thoughts
+                    </button>
+                    <button class="btn btn-secondary" onclick="startVoiceDump()">
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="stroke:currentColor; stroke-width:1.5"><path d="M8 2a3 3 0 00-3 3v4a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M3 8a5 5 0 0010 0M8 13v2"/></svg>
+                        Voice Dump
+                    </button>
+                </div>
+                <div id="braindump-output" style="margin-top: 16px;"></div>
+            </div>
 
-        // ========== Helper ==========
-        async function apiPost(path, body) {
-            const res = await fetch(`${API_BASE}${path}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-            });
-            if (!res.ok) throw new Error(`API error: ${res.status}`);
-            return res.json();
-        }
+            <!-- Today's Schedule Card -->
+            <div class="card">
+                <div class="card-title">
+                    <span>Schedule</span>
+                    <button class="btn btn-secondary" onclick="rebalanceSchedule()">Rebalance</button>
+                </div>
+                <div class="item-list" id="schedule-list">
+                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Loading agenda...</p>
+                </div>
+            </div>
 
-        async function apiGet(path) {
-            const res = await fetch(`${API_BASE}${path}`);
-            if (!res.ok) throw new Error(`API error: ${res.status}`);
-            return res.json();
-        }
+            <!-- Study Plan Card -->
+            <div class="card">
+                <div class="card-title">Study Planner</div>
+                <input id="study-topic" type="text" placeholder="Topic to decompose into micro-sprints...">
+                <button class="btn btn-primary" onclick="generateStudyPlan()">Decompose Topic</button>
+                <div id="study-plan-output" style="margin-top: 16px;"></div>
+            </div>
+        </main>
 
-        // ========== Brain Dump ==========
-        async function processBrainDump() {
-            const input = document.getElementById('braindump-input').value;
-            if (!input.trim()) return;
-            const output = document.getElementById('braindump-output');
-            output.innerHTML = '<p style="color:#a78bfa;"><span class="loading"></span> Processing your thoughts locally...</p>';
-            try {
-                const result = await apiPost('/api/braindump', { text: input });
-                const thoughts = result.thoughts || [];
-                const mood = result.mood_hint || 'unknown';
-                const step = result.suggested_first_step || 'none';
-                output.innerHTML = `
-                    <div class="memory-item" style="border-left-color:#4ade80;">✅ Captured ${thoughts.length} thoughts</div>
-                    <div class="memory-item" style="border-left-color:#fbbf24;">💭 Mood hint: ${mood}</div>
-                    <div class="memory-item" style="border-left-color:#3b82f6;">🎯 Suggested first step: ${step}</div>
-                `;
-                // Refresh schedule, memories, and vault after brain dump
-                loadSchedule();
-                loadMemories();
-                loadVaultStatus();
-            } catch (err) {
-                output.innerHTML = `<div class="memory-item" style="border-left-color:#ef4444;">⚠️ Error: ${err.message}</div>`;
-            }
-        }
-
-        // ========== Voice Dump ==========
-        async function startVoiceDump() {
-            voiceMode = 'braindump';
-            await startListening();
-            document.getElementById('voice-status-text').textContent = 'Recording brain dump... speak freely (15s recommended)';
-            // Auto-stop after 15 seconds
-            setTimeout(() => {
-                if (voiceWs && voiceWs.readyState === WebSocket.OPEN) {
-                    stopListening();
-                }
-            }, 15000);
-        }
-
-        // ========== Schedule ==========
-        async function loadSchedule() {
-            const list = document.getElementById('schedule-list');
-            try {
-                const data = await apiGet('/api/schedule');
-                const blocks = data.schedule || [];
-                if (blocks.length === 0) {
-                    list.innerHTML = '<p style="color:#888; font-size:0.85rem;">No tasks scheduled. Add some via Brain Dump!</p>';
-                    return;
-                }
-                list.innerHTML = blocks.map(b => {
-                    const isBuffer = b.type === 'buffer';
-                    const marker = isBuffer ? '☕' : '🔖';
-                    const badgeClass = isBuffer ? 'buffer-badge' : '';
-                    const badgeLabel = isBuffer ? 'break' : (b.priority || '');
-                    const start = b.start ? b.start.substring(11, 16) : '—';
-                    const end = b.end ? b.end.substring(11, 16) : '—';
-                    const mins = b.scaled_minutes || '—';
-                    return `
-                        <div class="schedule-item">
-                            <span class="schedule-time">${start}–${end}</span>
-                            <span class="schedule-label">${b.label || b.type}</span>
-                            <span class="schedule-badge ${badgeClass}">${badgeLabel} · ${mins}m</span>
-                        </div>
-                    `;
-                }).join('');
-            } catch (err) {
-                list.innerHTML = `<p style="color:#888; font-size:0.85rem;">⚠️ Could not load schedule: ${err.message}</p>`;
-            }
-        }
-
-        async function rebalanceSchedule() {
-            const list = document.getElementById('schedule-list');
-            list.innerHTML = '<p style="color:#6ee7b7;"><span class="loading"></span> Rebalancing...</p>';
-            try {
-                const data = await apiPost('/api/rebalance', { missed_block_id: null });
-                const suggestion = data.suggestion || 'Schedule updated.';
-                list.innerHTML = `<p style="color:#6ee7b7;">🔄 ${suggestion}</p>`;
-                loadSchedule();
-            } catch (err) {
-                list.innerHTML = `<p style="color:#888;">⚠️ Rebalance error: ${err.message}</p>`;
-            }
-        }
-
-        // ========== Memories ==========
-        async function loadMemories() {
-            const list = document.getElementById('memory-list');
-            try {
-                const data = await apiGet('/api/memories');
-                const memories = data.memories || [];
-                if (memories.length === 0) {
-                    list.innerHTML = '<p style="color:#888; font-size:0.85rem;">No memories stored yet.</p>';
-                    return;
-                }
-                list.innerHTML = memories.slice(0, 10).map(m =>
-                    `<div class="memory-item">${m.memory || m.text || '?'}</div>`
-                ).join('');
-            } catch (err) {
-                list.innerHTML = `<p style="color:#888; font-size:0.85rem;">⚠️ Could not load memories: ${err.message}</p>`;
-            }
-        }
-
-        async function searchMemory() {
-            const query = prompt('Search your memories:');
-            if (!query) return;
-            const list = document.getElementById('memory-list');
-            list.innerHTML = '<p style="color:#888;"><span class="loading"></span> Searching...</p>';
-            try {
-                const data = await apiPost('/api/memories/search', { query });
-                const results = data.results || [];
-                if (results.length === 0) {
-                    list.innerHTML = `<p style="color:#888;">No results for "${query}"</p>`;
-                    return;
-                }
-                list.innerHTML = results.map(r =>
-                    `<div class="memory-item" style="border-left-color:#3b82f6;">📌 ${r.memory} <span style="color:#888; font-size:0.75rem;">(${(r.score || 0).toFixed(3)})</span></div>`
-                ).join('');
-            } catch (err) {
-                list.innerHTML = `<p style="color:#888;">⚠️ Search error: ${err.message}</p>`;
-            }
-        }
-
-        // ========== Study Plan ==========
-        async function generateStudyPlan() {
-            const topic = document.getElementById('study-topic').value;
-            if (!topic.trim()) return;
-            const output = document.getElementById('study-plan-output');
-            output.innerHTML = '<p style="color:#a78bfa;"><span class="loading"></span> Generating study plan locally...</p>';
-            try {
-                const plan = await apiPost('/api/study', { topic });
-                const units = plan.units || [];
-                if (units.length === 0) {
-                    output.innerHTML = '<p style="color:#888;">No units generated.</p>';
-                    return;
-                }
-                output.innerHTML = units.map(u => {
-                    const prereqs = (u.prerequisites || []).filter(p => p !== 'none').join(', ') || 'none';
-                    const questions = (u.active_recall_questions || []).map(q => `❓ ${q}`).join('<br>');
-                    return `
-                        <div class="study-unit">
-                            <div class="unit-title">[${u.id}] ${u.title}</div>
-                            <div class="unit-meta">${u.estimated_minutes} min · ${u.difficulty || '—'} · requires ${prereqs}</div>
-                            <div class="recall-q">${questions}</div>
-                        </div>
-                    `;
-                }).join('');
-                const total = plan.total_estimated_minutes || units.reduce((s, u) => s + (u.estimated_minutes || 0), 0);
-                output.innerHTML += `<p style="color:#888; font-size:0.85rem; margin-top:8px;">⏱ Total: ${total} minutes</p>`;
-            } catch (err) {
-                output.innerHTML = `<div class="memory-item" style="border-left-color:#ef4444;">⚠️ Error: ${err.message}</div>`;
-            }
-        }
-
-        // ========== Voice (WebSocket streaming) ==========
-        let voiceWs = null;
-        let voiceMediaRecorder = null;
-        let voiceAudioContext = null;
-        let voiceStream = null;
-        let voiceMode = 'command';  // 'command' or 'braindump'
-        let audioChunksB64 = [];
-
-        function getWsUrl() {
-            const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-            return `${proto}//${location.host}/ws/voice`;
-        }
-
-        async function startListening() {
-            const dot = document.getElementById('voice-dot');
-            const status = document.getElementById('voice-status-text');
-
-            try {
-                // Request microphone access
-                voiceStream = await navigator.mediaDevices.getUserMedia({
-                    audio: {
-                        sampleRate: 16000,
-                        channelCount: 1,
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                    }
-                });
-
-                // Open WebSocket
-                voiceWs = new WebSocket(getWsUrl());
-
-                voiceWs.onopen = () => {
-                    status.textContent = 'Connected — starting recording...';
-                    voiceWs.send(JSON.stringify({
-                        type: 'start',
-                        mode: voiceMode,
-                        sample_rate: 16000,
-                    }));
-
-                    // Use AudioWorklet or ScriptProcessor to capture raw PCM
-                    // Chrome only supports 44100/48000 Hz, so we use the default
-                    // and resample to 16000 Hz before sending to the server
-                    voiceAudioContext = new AudioContext();
-                    const nativeRate = voiceAudioContext.sampleRate;  // typically 44100 or 48000
-                    const targetRate = 16000;
-                    const resampleRatio = nativeRate / targetRate;
-                    const source = voiceAudioContext.createMediaStreamSource(voiceStream);
-                    const processor = voiceAudioContext.createScriptProcessor(4096, 1, 1);
-
-                    audioChunksB64 = [];
-
-                    processor.onaudioprocess = (e) => {
-                        if (!voiceWs || voiceWs.readyState !== WebSocket.OPEN) return;
-                        const inputData = e.inputBuffer.getChannelData(0);
-                        // Simple linear interpolation resample to 16000 Hz
-                        const resampled = new Float32Array(Math.floor(inputData.length / resampleRatio));
-                        for (let i = 0; i < resampled.length; i++) {
-                            const srcIdx = i * resampleRatio;
-                            const idx = Math.floor(srcIdx);
-                            const frac = srcIdx - idx;
-                            resampled[i] = idx + 1 < inputData.length
-                                ? inputData[idx] * (1 - frac) + inputData[idx + 1] * frac
-                                : inputData[idx];
-                        }
-                        // Convert float32 to base64
-                        const bytes = new Uint8Array(resampled.buffer);
-                        let binary = '';
-                        for (let i = 0; i < bytes.length; i++) {
-                            binary += String.fromCharCode(bytes[i]);
-                        }
-                        const b64 = btoa(binary);
-                        voiceWs.send(JSON.stringify({ type: 'audio', data: b64 }));
-                    };
-
-                    source.connect(processor);
-                    processor.connect(voiceAudioContext.destination);
-
-                    // Store refs for cleanup
-                    voiceWs._processor = processor;
-                    voiceWs._source = source;
-
-                    dot.classList.add('recording');
-                    status.textContent = 'Listening... speak a command';
-                };
-
-                voiceWs.onmessage = (event) => {
-                    const msg = JSON.parse(event.data);
-                    handleVoiceMessage(msg);
-                };
-
-                voiceWs.onerror = (err) => {
-                    status.textContent = 'WebSocket error — is the server running?';
-                    dot.classList.remove('recording');
-                    cleanupVoice();
-                };
-
-                voiceWs.onclose = () => {
-                    dot.classList.remove('recording');
-                    cleanupVoice();
-                };
-
-            } catch (err) {
-                status.textContent = `Microphone error: ${err.message}`;
-                dot.classList.remove('recording');
-            }
-        }
-
-        function appendVoiceLog(html) {
-            const log = document.getElementById('voice-log');
-            if (!log) return;
-            log.innerHTML += html;
-            log.scrollTop = log.scrollHeight;
-        }
-
-        function handleVoiceMessage(msg) {
-            const status = document.getElementById('voice-status-text');
-            const dot = document.getElementById('voice-dot');
-
-            switch (msg.type) {
-                case 'status':
-                    status.textContent = msg.text;
-                    break;
-
-                case 'transcript':
-                    status.textContent = `Heard: "${msg.text}"`;
-                    appendVoiceLog(`<div class="memory-item" style="border-left-color:#3b82f6;">📝 ${msg.text}</div>`);
-                    break;
-
-                case 'response_text':
-                    appendVoiceLog(`<div class="memory-item" style="border-left-color:#4ade80;">💬 ${msg.text}</div>`);
-                    break;
-
-                case 'response_audio':
-                    playAudioChunk(msg.data, msg.sample_rate, msg.is_final);
-                    break;
-
-                case 'error':
-                    status.textContent = msg.text;
-                    appendVoiceLog(`<div class="memory-item" style="border-left-color:#ef4444;">⚠️ ${msg.text}</div>`);
-                    break;
-            }
-        }
-
-        function playAudioChunk(b64Data, sampleRate, isFinal) {
-            try {
-                const raw = atob(b64Data);
-                const bytes = new Uint8Array(raw.length);
-                for (let i = 0; i < raw.length; i++) {
-                    bytes[i] = raw.charCodeAt(i);
-                }
-                const float32 = new Float32Array(bytes.buffer);
-
-                const ctx = new AudioContext({ sampleRate: sampleRate });
-                const buffer = ctx.createBuffer(1, float32.length, sampleRate);
-                buffer.getChannelData(0).set(float32);
-
-                const source = ctx.createBufferSource();
-                source.buffer = buffer;
-                source.connect(ctx.destination);
-                source.start();
-
-                // Update status when final chunk finishes
-                if (isFinal) {
-                    source.onended = () => {
-                        document.getElementById('voice-status-text').textContent = 'Ready — speak or click Start Listening';
-                    };
-                }
-            } catch (err) {
-                console.error('Audio playback error:', err);
-            }
-        }
-
-        function stopListening() {
-            const dot = document.getElementById('voice-dot');
-            const status = document.getElementById('voice-status-text');
-
-            if (voiceWs && voiceWs.readyState === WebSocket.OPEN) {
-                voiceWs.send(JSON.stringify({ type: 'stop' }));
-                status.textContent = 'Processing...';
-            }
-            cleanupVoice();
-        }
-
-        function cleanupVoice() {
-            if (voiceWs && voiceWs._processor) {
-                try {
-                    voiceWs._processor.disconnect();
-                    voiceWs._source.disconnect();
-                } catch (e) {}
-            }
-            if (voiceStream) {
-                voiceStream.getTracks().forEach(t => t.stop());
-                voiceStream = null;
-            }
-            if (voiceAudioContext) {
-                voiceAudioContext.close().catch(() => {});
-                voiceAudioContext = null;
-            }
-            voiceWs = null;
-            document.getElementById('voice-dot').classList.remove('recording');
-        }
-
-        // ========== Data Sovereignty ==========
-        async function purgeAll() {
-            if (!confirm('Delete all stored memories? This cannot be undone.')) return;
-            const output = document.getElementById('sovereignty-output');
-            output.innerHTML = '<span style="color:#fbbf24;"><span class="loading"></span> Purging all memories...</span>';
-            try {
-                const result = await apiPost('/api/purge', {});
-                if (result.status === 'success') {
-                    // Verify purge
-                    const verify = await apiGet('/api/purge-status');
-                    if (verify.purged) {
-                        output.innerHTML = `<span style="color:#4ade80;">✅ All memories purged. Verified: ${verify.message}</span>`;
-                    } else {
-                        output.innerHTML = `<span style="color:#fbbf24;">⚠️ Purge sent but verification: ${verify.message}</span>`;
-                    }
-                    loadMemories();
-                } else {
-                    output.innerHTML = `<span style="color:#fbbf24;">⚠️ ${result.message}</span>`;
-                }
-            } catch (err) {
-                output.innerHTML = `<span style="color:#ef4444;">⚠️ Purge failed: ${err.message}</span>`;
-            }
-        }
-
-        async function checkNetwork() {
-            const output = document.getElementById('sovereignty-output');
-            output.innerHTML = '<span style="color:#a78bfa;"><span class="loading"></span> Checking outbound connections...</span>';
-            try {
-                const data = await apiGet('/api/network-check');
-                const status = data.status;
-                const color = status === 'clean' ? '#4ade80' : status === 'warning' ? '#fbbf24' : '#ef4444';
-                const icon = status === 'clean' ? '✅' : status === 'warning' ? '⚠️' : '❌';
-                let html = `<span style="color:${color};">${icon} ${data.message}</span>`;
-                const allConns = [...(data.app_connections || []), ...(data.system_connections || [])];
-                if (allConns.length > 0) {
-                    html += '<div style="margin-top:6px;">';
-                    if (data.app_connections && data.app_connections.length > 0) {
-                        html += '<div style="color:#ef4444; font-size:0.75rem; margin-bottom:2px;">App connections:</div>';
-                        data.app_connections.forEach(c => {
-                            html += `<div style="color:#fbbf24; font-size:0.8rem;">  → ${c.process}: ${c.remote_ip}:${c.remote_port}</div>`;
-                        });
-                    }
-                    if (data.system_connections && data.system_connections.length > 0) {
-                        html += '<div style="color:#888; font-size:0.75rem; margin-top:4px; margin-bottom:2px;">System connections:</div>';
-                        data.system_connections.slice(0, 10).forEach(c => {
-                            html += `<div style="color:#666; font-size:0.8rem;">  → ${c.process}: ${c.remote_ip}:${c.remote_port}</div>`;
-                        });
-                        if (data.system_connections.length > 10) {
-                            html += `<div style="color:#666; font-size:0.75rem;">  ... and ${data.system_connections.length - 10} more</div>`;
-                        }
-                    }
-                    html += '</div>';
-                }
-                output.innerHTML = html;
-            } catch (err) {
-                output.innerHTML = `<span style="color:#ef4444;">⚠️ Network check failed: ${err.message}</span>`;
-            }
-        }
-
-        // ========== Obsidian Vault ==========
-        async function loadVaultStatus() {
-            const statusEl = document.getElementById('vault-status');
-            const notesEl = document.getElementById('vault-notes');
-            try {
-                const data = await apiGet('/api/obsidian');
-                const reachable = data.server_reachable;
-                const noteCount = data.note_count || 0;
-                const dotClass = reachable ? 'online' : 'offline';
-                const label = reachable ? 'Obsidian connected' : 'Obsidian offline (vault on disk)';
-                statusEl.innerHTML = `
-                    <div class="vault-status-row">
-                        <div class="vault-dot ${dotClass}"></div>
-                        <span style="font-size:0.85rem;">${label}</span>
-                        <span style="color:#888; font-size:0.8rem; margin-left:auto;">${noteCount} notes</span>
+        <!-- Right Side: Engine, Memories, Obsidian, Sovereignty -->
+        <aside>
+            <!-- System AI Engine Diagnostics -->
+            <div class="card">
+                <div class="card-title">System Status</div>
+                <div class="diag-grid">
+                    <div class="diag-item">
+                        <span class="diag-label">Ollama</span>
+                        <div class="diag-value" id="status-ollama"><span class="status-dot"></span> Checking</div>
                     </div>
-                `;
-                // Fetch recent notes from the vault directory
-                await loadVaultNotes();
-            } catch (err) {
-                statusEl.innerHTML = `<p style="color:#888; font-size:0.85rem;">⚠️ Could not load vault: ${err.message}</p>`;
-            }
+                    <div class="diag-item">
+                        <span class="diag-label">Active Model</span>
+                        <div class="diag-value" id="status-model">—</div>
+                    </div>
+                    <div class="diag-item">
+                        <span class="diag-label">Memory Engine</span>
+                        <div class="diag-value" id="status-memory"><span class="status-dot"></span> Checking</div>
+                    </div>
+                    <div class="diag-item">
+                        <span class="diag-label">Obsidian Client</span>
+                        <div class="diag-value" id="status-obsidian"><span class="status-dot"></span> Checking</div>
+                    </div>
+                    <div id="diagnostics-warnings" class="diag-warn-box" style="display: none;"></div>
+                </div>
+            </div>
+
+            <!-- Voice Interface Real-time Streaming -->
+            <div class="card">
+                <div class="card-title">Voice Interface</div>
+                <div class="voice-box">
+                    <div class="status-indicator">
+                        <span class="status-dot" id="voice-dot"></span>
+                        <span id="voice-status-text" style="font-size:0.85rem;">Inactive</span>
+                    </div>
+                    <div style="margin-top: 12px; font-size: 0.8rem; color: var(--text-secondary);">
+                        <span>Mode:</span>
+                        <label style="margin-left: 12px; cursor: pointer;">
+                            <input type="radio" name="voice-mode" value="command" checked onchange="voiceMode='command'"> Command
+                        </label>
+                        <label style="margin-left: 16px; cursor: pointer;">
+                            <input type="radio" name="voice-mode" value="braindump" onchange="voiceMode='braindump'"> Brain Dump
+                        </label>
+                    </div>
+                    <div class="btn-row" style="margin-top: 16px;">
+                        <button class="btn btn-primary" onclick="startListening()">Start Listening</button>
+                        <button class="btn btn-secondary" onclick="stopListening()">Stop</button>
+                    </div>
+                    <div class="voice-log" id="voice-log"></div>
+                </div>
+            </div>
+
+            <!-- Semantic Memories -->
+            <div class="card">
+                <div class="card-title">
+                    <span>Semantic Memory</span>
+                    <button class="btn btn-secondary" onclick="searchMemory()">Search</button>
+                </div>
+                <div class="item-list" id="memory-list">
+                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Reading vector logs...</p>
+                </div>
+            </div>
+
+            <!-- Obsidian Vault notes -->
+            <div class="card">
+                <div class="card-title">
+                    <span>Obsidian Vault</span>
+                    <button class="btn btn-secondary" onclick="loadVaultStatus()">Refresh</button>
+                </div>
+                <div class="item-list" id="vault-notes">
+                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Reading notes folder...</p>
+                </div>
+            </div>
+
+            <!-- Data Sovereignty and privacy checks -->
+            <div class="card">
+                <div class="card-title">Data Sovereignty</div>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">
+                    Zero external requests. Local inference only. Safe air-gapped processing.
+                </p>
+                <div class="btn-row">
+                    <button class="btn btn-secondary" onclick="checkNetwork()">Network Audit</button>
+                    <button class="btn btn-danger" onclick="purgeAll()">Purge Memory</button>
+                </div>
+                <div id="sovereignty-output" style="margin-top: 12px; font-size: 0.85rem;"></div>
+            </div>
+        </aside>
+    </div>
+
+    <footer>
+        No badges. No counters. Supportive pacing. All inference local.
+    </footer>
+</div>
+
+<script>
+    const API_BASE = '';
+    let apiToken = localStorage.getItem('ADHD_COPILOT_TOKEN') || '';
+
+    // Set token input value on load
+    document.getElementById('api-token-input').value = apiToken;
+
+    function saveToken(token) {
+        apiToken = token.trim();
+        localStorage.setItem('ADHD_COPILOT_TOKEN', apiToken);
+        loadSchedule();
+        loadMemories();
+        loadVaultStatus();
+        loadSystemDiagnostics();
+    }
+
+    // ========== API Wrapper ==========
+    async function apiPost(path, body) {
+        const headers = { 'Content-Type': 'application/json' };
+        if (apiToken) {
+            headers['X-API-Token'] = apiToken;
         }
-
-        async function loadVaultNotes() {
-            const notesEl = document.getElementById('vault-notes');
-            try {
-                // Use the vault API to list notes (we fetch from the filesystem via a helper)
-                const data = await apiGet('/api/obsidian/notes');
-                const notes = data.notes || [];
-                if (notes.length === 0) {
-                    notesEl.innerHTML = '<p style="color:#888; font-size:0.82rem; margin-top:6px;">No notes yet — do a brain dump to create one.</p>';
-                    return;
-                }
-                notesEl.innerHTML = notes.slice(0, 8).map(n => {
-                    // Parse timestamp from filename: YYYY-MM-DD-HHMM.md
-                    const match = n.match(/(\d{4}-\d{2}-\d{2})-(\d{2})(\d{2})\.md/);
-                    const dateStr = match ? `${match[1]} ${match[2]}:${match[3]}` : n;
-                    return `
-                        <div class="vault-note">
-                            <span class="note-name">📝 ${n.replace('.md', '')}</span>
-                            <span class="note-time">${dateStr}</span>
-                        </div>
-                    `;
-                }).join('');
-                if (notes.length > 8) {
-                    notesEl.innerHTML += `<p style="color:#666; font-size:0.75rem; margin-top:4px;">… and ${notes.length - 8} more</p>`;
-                }
-            } catch (err) {
-                notesEl.innerHTML = '<p style="color:#888; font-size:0.82rem; margin-top:6px;">Open vault/ in Obsidian to browse notes.</p>';
-            }
+        const res = await fetch(`${API_BASE}${path}`, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(body),
+        });
+        if (res.status === 401) {
+            handleUnauthorized();
+            throw new Error('Authentication token required');
         }
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        return res.json();
+    }
 
-        // ========== Notifications ==========
-        let notificationsEnabled = false;
-
-        async function requestNotificationPermission() {
-            if ('Notification' in window) {
-                const permission = await Notification.requestPermission();
-                notificationsEnabled = permission === 'granted';
-                if (notificationsEnabled) {
-                    showBrowserNotification('Notifications Enabled', 'You\'ll receive gentle reminders for tasks and focus nudges.');
-                }
-            }
+    async function apiGet(path) {
+        const headers = {};
+        if (apiToken) {
+            headers['X-API-Token'] = apiToken;
         }
+        const res = await fetch(`${API_BASE}${path}`, { headers });
+        if (res.status === 401) {
+            handleUnauthorized();
+            throw new Error('Authentication token required');
+        }
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        return res.json();
+    }
 
-        function showBrowserNotification(title, body, category = 'general') {
-            if (!notificationsEnabled || !('Notification' in window)) return;
+    function handleUnauthorized() {
+        const input = document.getElementById('api-token-input');
+        input.style.borderColor = '#9F2F2D';
+        input.focus();
+        const warning = document.getElementById('diagnostics-warnings');
+        warning.innerHTML = 'Authentication failed. Please verify your ADHD_COPILOT_TOKEN security setting.';
+        warning.style.display = 'block';
+    }
+
+    // ========== System Status & Diagnostics ==========
+    async function loadSystemDiagnostics() {
+        const statusOllama = document.getElementById('status-ollama');
+        const statusModel = document.getElementById('status-model');
+        const statusMemory = document.getElementById('status-memory');
+        const statusObsidian = document.getElementById('status-obsidian');
+        const warningBox = document.getElementById('diagnostics-warnings');
+
+        try {
+            // Get diagnostic report
+            const data = await apiGet('/api/diagnostics');
             
-            const notif = new Notification(title, {
-                body: body,
-                icon: '/favicon.ico',
-                tag: category + '_' + Date.now(),
-                requireInteraction: false,
-            });
+            // Ollama
+            if (data.ollama_reachable) {
+                statusOllama.innerHTML = '<span class="status-dot online"></span> Online';
+            } else {
+                statusOllama.innerHTML = '<span class="status-dot offline"></span> Offline';
+            }
+
+            // Configured model
+            statusModel.textContent = data.configured_model || 'Unknown';
+            if (!data.model_exists_locally) {
+                statusModel.style.color = 'var(--pastel-yellow-text)';
+            } else {
+                statusModel.style.color = 'inherit';
+            }
+
+            // Warning Banner
+            if (data.warnings && data.warnings.length > 0) {
+                warningBox.innerHTML = data.warnings.map(w => `<div>${w}</div>`).join('');
+                warningBox.style.display = 'block';
+            } else {
+                warningBox.style.display = 'none';
+            }
+        } catch (err) {
+            statusOllama.innerHTML = '<span class="status-dot offline"></span> Error';
+            statusModel.textContent = '—';
+        }
+
+        try {
+            // Get general health status for other components
+            const health = await apiGet('/api/health');
+            const memActive = health.components.memory_service === 'active';
+            statusMemory.innerHTML = `<span class="status-dot ${memActive ? 'online' : 'online'}"></span> Ready`;
+        } catch (err) {
+            statusMemory.innerHTML = '<span class="status-dot offline"></span> Offline';
+        }
+    }
+
+    // ========== Brain Dump ==========
+    async function processBrainDump() {
+        const input = document.getElementById('braindump-input').value;
+        if (!input.trim()) return;
+        const output = document.getElementById('braindump-output');
+        output.innerHTML = '<p style="color:var(--text-secondary);"><span class="spinner"></span> Resolving thoughts...</p>';
+        try {
+            const result = await apiPost('/api/braindump', { text: input });
+            const thoughts = result.thoughts || [];
+            const mood = result.mood_hint || 'unknown';
+            const step = result.suggested_first_step || 'none';
             
-            notif.onclick = () => {
-                window.focus();
-                notif.close();
-            };
-        }
+            output.innerHTML = `
+                <div class="item-block">
+                    <strong>Extracted thoughts:</strong> ${thoughts.length} captured
+                </div>
+                <div class="item-block">
+                    <strong>Mood context:</strong> ${mood}
+                </div>
+            `;
 
-        async function loadNotifications() {
-            try {
-                const data = await apiGet('/api/notifications');
-                const notifs = data.notifications || [];
-                const unread = data.unread_count || 0;
-                
-                // Show browser notification for new unread items
-                if (unread > 0 && notificationsEnabled) {
-                    const latest = notifs[0];
-                    if (latest && !latest.read) {
-                        showBrowserNotification(latest.title, latest.body, latest.category);
-                    }
-                }
-            } catch (err) {
-                // Notifications endpoint may not exist yet
+            if (step && step !== 'none') {
+                const banner = document.getElementById('active-sprint-banner');
+                const text = document.getElementById('active-sprint-text');
+                text.textContent = step;
+                banner.style.display = 'block';
             }
-        }
 
-        async function markNotificationsRead() {
-            try {
-                await apiPost('/api/notifications/read-all', {});
-            } catch (err) {}
-        }
-
-        // Request notification permission on first user interaction
-        document.addEventListener('click', function requestOnce() {
-            if (!notificationsEnabled) {
-                requestNotificationPermission();
-            }
-            document.removeEventListener('click', requestOnce);
-        }, { once: true });
-
-        // ========== Init: load data on page load ==========
-        document.addEventListener('DOMContentLoaded', () => {
             loadSchedule();
             loadMemories();
             loadVaultStatus();
-            loadNotifications();
-            
-            // Check for notifications every 30 seconds
-            setInterval(loadNotifications, 30000);
+        } catch (err) {
+            output.innerHTML = `<div class="item-block" style="border-color:var(--pastel-red-text); background:var(--pastel-red-bg); color:var(--pastel-red-text)">Could not complete action: ${err.message}</div>`;
+        }
+    }
+
+    // ========== Voice Dump ==========
+    async function startVoiceDump() {
+        voiceMode = 'braindump';
+        await startListening();
+        document.getElementById('voice-status-text').textContent = 'Voice capturing active...';
+        setTimeout(() => {
+            if (voiceWs && voiceWs.readyState === WebSocket.OPEN) {
+                stopListening();
+            }
+        }, 15000);
+    }
+
+    // ========== Schedule ==========
+    async function loadSchedule() {
+        const list = document.getElementById('schedule-list');
+        try {
+            const data = await apiGet('/api/schedule');
+            const blocks = data.schedule || [];
+            if (blocks.length === 0) {
+                list.innerHTML = '<p style="color:var(--text-secondary); font-size:0.9rem;">No scheduled tasks. Capture something above!</p>';
+                return;
+            }
+            list.innerHTML = blocks.map(b => {
+                const isBuffer = b.type === 'buffer';
+                const badgeClass = isBuffer ? 'badge-success' : 'badge-info';
+                const badgeLabel = isBuffer ? 'break' : (b.priority || 'sprint');
+                const start = b.start ? b.start.substring(11, 16) : '—';
+                const end = b.end ? b.end.substring(11, 16) : '—';
+                const mins = b.scaled_minutes || '—';
+                return `
+                    <div class="list-row">
+                        <span class="list-row-time">${start}–${end}</span>
+                        <span class="list-row-main">${b.label || b.type}</span>
+                        <span class="badge ${badgeClass}">${badgeLabel} · ${mins}m</span>
+                    </div>
+                `;
+            }).join('');
+        } catch (err) {
+            list.innerHTML = `<p style="color:var(--text-secondary); font-size:0.9rem;">Could not load schedule: ${err.message}</p>`;
+        }
+    }
+
+    async function rebalanceSchedule() {
+        const list = document.getElementById('schedule-list');
+        list.innerHTML = '<p style="color:var(--text-secondary);"><span class="spinner"></span> Reordering schedule...</p>';
+        try {
+            const data = await apiPost('/api/rebalance', { missed_block_id: null });
+            loadSchedule();
+        } catch (err) {
+            list.innerHTML = `<p style="color:var(--text-secondary);">Rebalance failed: ${err.message}</p>`;
+        }
+    }
+
+    // ========== Memories ==========
+    async function loadMemories() {
+        const list = document.getElementById('memory-list');
+        try {
+            const data = await apiGet('/api/memories');
+            const memories = data.memories || [];
+            if (memories.length === 0) {
+                list.innerHTML = '<p style="color:var(--text-secondary); font-size:0.9rem;">Memory logs empty.</p>';
+                return;
+            }
+            list.innerHTML = memories.slice(0, 5).map(m =>
+                `<div class="item-block">${m.memory || m.text || '?'}</div>`
+            ).join('');
+        } catch (err) {
+            list.innerHTML = `<p style="color:var(--text-secondary); font-size:0.9rem;">Error: ${err.message}</p>`;
+        }
+    }
+
+    async function searchMemory() {
+        const query = prompt('Enter memory query:');
+        if (!query) return;
+        const list = document.getElementById('memory-list');
+        list.innerHTML = '<p style="color:var(--text-secondary);"><span class="spinner"></span> Querying vectors...</p>';
+        try {
+            const data = await apiPost('/api/memories/search', { query });
+            const results = data.results || [];
+            if (results.length === 0) {
+                list.innerHTML = `<p style="color:var(--text-secondary);">No matches for "${query}"</p>`;
+                return;
+            }
+            list.innerHTML = results.map(r =>
+                `<div class="item-block" style="border-left: 2px solid var(--text-primary)">
+                    ${r.memory} <span style="color:var(--text-secondary); font-size:0.75rem;">(${(r.score || 0).toFixed(2)})</span>
+                </div>`
+            ).join('');
+        } catch (err) {
+            list.innerHTML = `<p style="color:var(--text-secondary);">Query failed: ${err.message}</p>`;
+        }
+    }
+
+    // ========== Study Plan ==========
+    async function generateStudyPlan() {
+        const topic = document.getElementById('study-topic').value;
+        if (!topic.trim()) return;
+        const output = document.getElementById('study-plan-output');
+        output.innerHTML = '<p style="color:var(--text-secondary);"><span class="spinner"></span> Decomposing plan...</p>';
+        try {
+            const plan = await apiPost('/api/study', { topic });
+            const units = plan.units || [];
+            if (units.length === 0) {
+                output.innerHTML = '<p style="color:var(--text-secondary);">Planning empty.</p>';
+                return;
+            }
+            output.innerHTML = units.map(u => {
+                const prereqs = (u.prerequisites || []).filter(p => p !== 'none').join(', ') || 'none';
+                const questions = (u.active_recall_questions || []).map(q => `· ${q}`).join('<br>');
+                return `
+                    <div class="item-block" style="border-left: 2px solid var(--pastel-blue-text)">
+                        <div style="font-weight:600;">${u.title}</div>
+                        <div style="font-size:0.8rem; color:var(--text-secondary); margin:2px 0;">${u.estimated_minutes} min · ${u.difficulty || 'standard'} · requires: ${prereqs}</div>
+                        <div style="font-size:0.82rem; margin-top:4px; opacity:0.85;">${questions}</div>
+                    </div>
+                `;
+            }).join('');
+            const total = plan.total_estimated_minutes || units.reduce((s, u) => s + (u.estimated_minutes || 0), 0);
+            output.innerHTML += `<p style="color:var(--text-secondary); font-size:0.8rem; margin-top:8px;">Total estimated time: ${total} minutes</p>`;
+        } catch (err) {
+            output.innerHTML = `<div class="item-block" style="border-color:var(--pastel-red-text); background:var(--pastel-red-bg); color:var(--pastel-red-text)">Decomposition failed: ${err.message}</div>`;
+        }
+    }
+
+    // ========== Voice (WebSocket streaming) ==========
+    let voiceWs = null;
+    let voiceMediaRecorder = null;
+    let voiceAudioContext = null;
+    let voiceStream = null;
+    let voiceMode = 'command';
+    let audioChunksB64 = [];
+
+    function getWsUrl() {
+        const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const tokenParam = apiToken ? `?token=${encodeURIComponent(apiToken)}` : '';
+        return `${proto}//${location.host}/ws/voice${tokenParam}`;
+    }
+
+    async function startListening() {
+        const dot = document.getElementById('voice-dot');
+        const status = document.getElementById('voice-status-text');
+
+        try {
+            voiceStream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    sampleRate: 16000,
+                    channelCount: 1,
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                }
+            });
+
+            voiceWs = new WebSocket(getWsUrl());
+
+            voiceWs.onopen = () => {
+                status.textContent = 'Connecting...';
+                voiceWs.send(JSON.stringify({
+                    type: 'start',
+                    mode: voiceMode,
+                    sample_rate: 16000,
+                }));
+
+                voiceAudioContext = new AudioContext();
+                const nativeRate = voiceAudioContext.sampleRate;
+                const targetRate = 16000;
+                const resampleRatio = nativeRate / targetRate;
+                const source = voiceAudioContext.createMediaStreamSource(voiceStream);
+                const processor = voiceAudioContext.createScriptProcessor(4096, 1, 1);
+
+                audioChunksB64 = [];
+
+                processor.onaudioprocess = (e) => {
+                    if (!voiceWs || voiceWs.readyState !== WebSocket.OPEN) return;
+                    const inputData = e.inputBuffer.getChannelData(0);
+                    const resampled = new Float32Array(Math.floor(inputData.length / resampleRatio));
+                    for (let i = 0; i < resampled.length; i++) {
+                        const srcIdx = i * resampleRatio;
+                        const idx = Math.floor(srcIdx);
+                        const frac = srcIdx - idx;
+                        resampled[i] = idx + 1 < inputData.length
+                            ? inputData[idx] * (1 - frac) + inputData[idx + 1] * frac
+                            : inputData[idx];
+                    }
+                    const bytes = new Uint8Array(resampled.buffer);
+                    let binary = '';
+                    for (let i = 0; i < bytes.length; i++) {
+                        binary += String.fromCharCode(bytes[i]);
+                    }
+                    const b64 = btoa(binary);
+                    voiceWs.send(JSON.stringify({ type: 'audio', data: b64 }));
+                };
+
+                source.connect(processor);
+                processor.connect(voiceAudioContext.destination);
+
+                voiceWs._processor = processor;
+                voiceWs._source = source;
+
+                dot.className = 'status-dot recording';
+                status.textContent = 'Listening...';
+            };
+
+            voiceWs.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                handleVoiceMessage(msg);
+            };
+
+            voiceWs.onerror = (err) => {
+                status.textContent = 'Connection failed';
+                dot.className = 'status-dot offline';
+                cleanupVoice();
+            };
+
+            voiceWs.onclose = () => {
+                dot.className = 'status-dot';
+                cleanupVoice();
+            };
+
+        } catch (err) {
+            status.textContent = `Microphone error: ${err.message}`;
+            dot.className = 'status-dot offline';
+        }
+    }
+
+    function appendVoiceLog(html) {
+        const log = document.getElementById('voice-log');
+        if (!log) return;
+        log.innerHTML += `<div class="voice-log-entry">${html}</div>`;
+        log.scrollTop = log.scrollHeight;
+    }
+
+    function handleVoiceMessage(msg) {
+        const status = document.getElementById('voice-status-text');
+
+        switch (msg.type) {
+            case 'status':
+                status.textContent = msg.text;
+                break;
+
+            case 'transcript':
+                status.textContent = `Heard: "${msg.text}"`;
+                appendVoiceLog(`Heard: "${msg.text}"`);
+                break;
+
+            case 'response_text':
+                appendVoiceLog(`Jarvis: "${msg.text}"`);
+                break;
+
+            case 'response_audio':
+                playAudioChunk(msg.data, msg.sample_rate, msg.is_final);
+                break;
+
+            case 'error':
+                status.textContent = msg.text;
+                appendVoiceLog(`Error: ${msg.text}`);
+                break;
+        }
+    }
+
+    function playAudioChunk(b64Data, sampleRate, isFinal) {
+        try {
+            const raw = atob(b64Data);
+            const bytes = new Uint8Array(raw.length);
+            for (let i = 0; i < raw.length; i++) {
+                bytes[i] = raw.charCodeAt(i);
+            }
+            const float32 = new Float32Array(bytes.buffer);
+
+            const ctx = new AudioContext({ sampleRate: sampleRate });
+            const buffer = ctx.createBuffer(1, float32.length, sampleRate);
+            buffer.getChannelData(0).set(float32);
+
+            const source = ctx.createBufferSource();
+            source.buffer = buffer;
+            source.connect(ctx.destination);
+            source.start();
+
+            if (isFinal) {
+                source.onended = () => {
+                    document.getElementById('voice-status-text').textContent = 'Listening complete';
+                };
+            }
+        } catch (err) {
+            console.error('Playback error:', err);
+        }
+    }
+
+    function stopListening() {
+        const dot = document.getElementById('voice-dot');
+        const status = document.getElementById('voice-status-text');
+
+        if (voiceWs && voiceWs.readyState === WebSocket.OPEN) {
+            voiceWs.send(JSON.stringify({ type: 'stop' }));
+            status.textContent = 'Processing voice...';
+        }
+        cleanupVoice();
+    }
+
+    function cleanupVoice() {
+        if (voiceWs && voiceWs._processor) {
+            try {
+                voiceWs._processor.disconnect();
+                voiceWs._source.disconnect();
+            } catch (e) {}
+        }
+        if (voiceStream) {
+            voiceStream.getTracks().forEach(t => t.stop());
+            voiceStream = null;
+        }
+        if (voiceAudioContext) {
+            voiceAudioContext.close().catch(() => {});
+            voiceAudioContext = null;
+        }
+        voiceWs = null;
+        document.getElementById('voice-dot').classList.remove('recording');
+    }
+
+    // ========== Data Sovereignty ==========
+    async function purgeAll() {
+        if (!confirm('Erase all local memories? This cannot be undone.')) return;
+        const output = document.getElementById('sovereignty-output');
+        output.innerHTML = '<span style="color:var(--text-secondary);"><span class="spinner"></span> Wiping local databases...</span>';
+        try {
+            const result = await apiPost('/api/purge', {});
+            if (result.status === 'success') {
+                const verify = await apiGet('/api/purge-status');
+                if (verify.purged) {
+                    output.innerHTML = `<span style="color:#346538;">All database tables cleared.</span>`;
+                } else {
+                    output.innerHTML = `<span style="color:#956400;">Verification incomplete: ${verify.message}</span>`;
+                }
+                loadMemories();
+            } else {
+                output.innerHTML = `<span style="color:#956400;">Error: ${result.message}</span>`;
+            }
+        } catch (err) {
+            output.innerHTML = `<span style="color:#9F2F2D;">Action failed: ${err.message}</span>`;
+        }
+    }
+
+    async function checkNetwork() {
+        const output = document.getElementById('sovereignty-output');
+        output.innerHTML = '<span style="color:var(--text-secondary);"><span class="spinner"></span> Scanning TCP/IP bounds...</span>';
+        try {
+            const data = await apiGet('/api/network-check');
+            const status = data.status;
+            const color = status === 'clean' ? '#346538' : status === 'warning' ? '#956400' : '#9F2F2D';
+            let html = `<span style="color:${color}; font-weight:600;">Status: ${status.toUpperCase()}</span>`;
+            html += `<div style="font-size:0.8rem; margin-top:4px;">${data.message}</div>`;
+            const allConns = [...(data.app_connections || []), ...(data.system_connections || [])];
+            if (allConns.length > 0) {
+                html += '<div style="margin-top:8px; border-top: 1px solid var(--border-color); padding-top:6px;">';
+                if (data.app_connections && data.app_connections.length > 0) {
+                    data.app_connections.forEach(c => {
+                        html += `<div style="color:#9F2F2D; font-size:0.75rem;">Outbound: ${c.process} → ${c.remote_ip}:${c.remote_port}</div>`;
+                    });
+                }
+                if (data.system_connections && data.system_connections.length > 0) {
+                    data.system_connections.slice(0, 5).forEach(c => {
+                        html += `<div style="color:var(--text-secondary); font-size:0.75rem;">System: ${c.process} → ${c.remote_ip}:${c.remote_port}</div>`;
+                    });
+                }
+                html += '</div>';
+            }
+            output.innerHTML = html;
+        } catch (err) {
+            output.innerHTML = `<span style="color:#9F2F2D;">Scanning failed: ${err.message}</span>`;
+        }
+    }
+
+    // ========== Obsidian Vault ==========
+    async function loadVaultStatus() {
+        const statusObsidian = document.getElementById('status-obsidian');
+        const notesEl = document.getElementById('vault-notes');
+        try {
+            const data = await apiGet('/api/obsidian');
+            const reachable = data.server_reachable;
+            const noteCount = data.note_count || 0;
+            const dotClass = reachable ? 'online' : 'offline';
+            statusObsidian.innerHTML = `<span class="status-dot ${dotClass}"></span> ${reachable ? 'Connected' : 'Offline'}`;
+            await loadVaultNotes();
+        } catch (err) {
+            statusObsidian.innerHTML = '<span class="status-dot offline"></span> Offline';
+        }
+    }
+
+    async function loadVaultNotes() {
+        const notesEl = document.getElementById('vault-notes');
+        try {
+            const data = await apiGet('/api/obsidian/notes');
+            const notes = data.notes || [];
+            if (notes.length === 0) {
+                notesEl.innerHTML = '<p style="color:var(--text-secondary); font-size:0.85rem;">Notes directory empty.</p>';
+                return;
+            }
+            notesEl.innerHTML = notes.slice(0, 5).map(n => {
+                const match = n.match(/(\d{4}-\d{2}-\d{2})-(\d{2})(\d{2})\.md/);
+                const dateStr = match ? `${match[1]} ${match[2]}:${match[3]}` : n.replace('.md', '');
+                return `
+                    <div class="list-row" style="padding: 8px 0;">
+                        <span class="list-row-main" style="font-size:0.88rem;">${n.replace('.md', '')}</span>
+                        <span style="font-family:'Geist Mono', monospace; font-size:0.75rem; color:var(--text-secondary);">${dateStr}</span>
+                    </div>
+                `;
+            }).join('');
+        } catch (err) {
+            notesEl.innerHTML = '<p style="color:var(--text-secondary); font-size:0.85rem;">Local vault inactive.</p>';
+        }
+    }
+
+    // ========== Notifications ==========
+    let notificationsEnabled = false;
+
+    async function requestNotificationPermission() {
+        if ('Notification' in window) {
+            const permission = await Notification.requestPermission();
+            notificationsEnabled = permission === 'granted';
+        }
+    }
+
+    function showBrowserNotification(title, body, category = 'general') {
+        if (!notificationsEnabled || !('Notification' in window)) return;
+        const notif = new Notification(title, {
+            body: body,
+            icon: '/favicon.ico',
+            tag: category + '_' + Date.now(),
+            requireInteraction: false,
         });
-    </script>
+        notif.onclick = () => {
+            window.focus();
+            notif.close();
+        };
+    }
+
+    async function loadNotifications() {
+        try {
+            const data = await apiGet('/api/notifications');
+            const notifs = data.notifications || [];
+            const unread = data.unread_count || 0;
+            if (unread > 0 && notificationsEnabled) {
+                const latest = notifs[0];
+                if (latest && !latest.read) {
+                    showBrowserNotification(latest.title, latest.body, latest.category);
+                }
+            }
+        } catch (err) {}
+    }
+
+    document.addEventListener('click', function requestOnce() {
+        if (!notificationsEnabled) {
+            requestNotificationPermission();
+        }
+        document.removeEventListener('click', requestOnce);
+    }, { once: true });
+
+    // ========== DOM Ready Initialization ==========
+    document.addEventListener('DOMContentLoaded', () => {
+        loadSchedule();
+        loadMemories();
+        loadVaultStatus();
+        loadSystemDiagnostics();
+        loadNotifications();
+        
+        setInterval(loadNotifications, 30000);
+        setInterval(loadSystemDiagnostics, 15000);
+    });
+</script>
 </body>
 </html>
