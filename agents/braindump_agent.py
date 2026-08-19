@@ -35,21 +35,47 @@ Rules:
 
 
 def process_braindump(raw_text: str, model: str = "llama3.1:latest") -> dict:
-    """Send raw text to Ollama and return structured JSON."""
-    response = ollama.chat(
-        model=model,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": raw_text},
-        ],
-        options={"temperature": 0.3},
-    )
-    content = response["message"]["content"].strip()
+    """Send raw text to Ollama and return structured JSON.
+
+    Returns a fallback structure if Ollama returns empty or invalid JSON.
+    """
+    try:
+        response = ollama.chat(
+            model=model,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": raw_text},
+            ],
+            options={"temperature": 0.3},
+        )
+        content = response["message"]["content"].strip()
+    except Exception as e:
+        print(f"  ⚠️  Ollama error: {e}")
+        content = ""
+
     # Strip markdown fences if present
     if content.startswith("```"):
         content = content.split("\n", 1)[1]
         content = content.rsplit("```", 1)[0].strip()
-    return json.loads(content)
+
+    # Try to parse JSON; fall back to a basic structure
+    try:
+        return json.loads(content)
+    except (json.JSONDecodeError, ValueError):
+        # Build a fallback from the raw text
+        return {
+            "thoughts": [
+                {
+                    "text": raw_text[:120],
+                    "type": "task",
+                    "priority": "soon",
+                    "estimated_minutes": 15,
+                    "tags": [],
+                }
+            ],
+            "mood_hint": "unclear",
+            "suggested_first_step": "Review this thought",
+        }
 
 
 # ---------------------------------------------------------------------------
