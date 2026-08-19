@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#6366f1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Jarvis">
+  <link rel="manifest" href="/pwa/manifest.json">
+  <link rel="apple-touch-icon" href="/pwa/icons/icon-192.png">
+  <title>Jarvis Co-Processor</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #141420;
+      --surface-2: #1e1e2e;
+      --border: #2a2a3a;
+      --text: #e4e4ef;
+      --text-dim: #8888aa;
+      --accent: #6366f1;
+      --accent-glow: rgba(99, 102, 241, 0.3);
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --error: #ef4444;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Header */
+    .header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header h1 {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .header .status {
+      font-size: 12px;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .header .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* Main content */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Message bubbles */
+    .message {
+      max-width: 85%;
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 15px;
+      line-height: 1.5;
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background: var(--accent);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message.assistant {
+      align-self: flex-start;
+      background: var(--surface-2);
+      border-bottom-left-radius: 4px;
+    }
+
+    .message.system {
+      align-self: center;
+      background: transparent;
+      color: var(--text-dim);
+      font-size: 13px;
+      padding: 4px 12px;
+    }
+
+    .message .timestamp {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    /* Quick actions */
+    .quick-actions {
+      display: flex;
+      gap: 8px;
+      padding: 8px 20px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .quick-actions::-webkit-scrollbar { display: none; }
+
+    .quick-btn {
+      flex-shrink: 0;
+      padding: 8px 16px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .quick-btn:active {
+      background: var(--accent);
+      border-color: var(--accent);
+      transform: scale(0.96);
+    }
+
+    /* Record button */
+    .record-bar {
+      padding: 16px 20px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .record-btn {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-size: 28px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
+      box-shadow: 0 0 0 0 var(--accent-glow);
+    }
+
+    .record-btn:active {
+      transform: scale(0.92);
+    }
+
+    .record-btn.recording {
+      background: var(--error);
+      animation: recordPulse 1s ease-in-out infinite;
+    }
+
+    @keyframes recordPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+      50% { box-shadow: 0 0 0 16px rgba(239, 68, 68, 0); }
+    }
+
+    .record-status {
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    /* Text input */
+    .text-input-bar {
+      display: flex;
+      gap: 8px;
+      padding: 0 20px 8px;
+    }
+
+    .text-input-bar input {
+      flex: 1;
+      padding: 10px 16px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 15px;
+      outline: none;
+    }
+
+    .text-input-bar input:focus {
+      border-color: var(--accent);
+    }
+
+    .text-input-bar button {
+      padding: 10px 20px;
+      border-radius: 20px;
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    /* Schedule card */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .card h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text-dim);
+    }
+
+    .card .item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+
+    .card .item:last-child { border-bottom: none; }
+
+    .card .item .time {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    /* Sovereignty status widget */
+    .sovereignty-bar {
+      padding: 6px 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--text-dim);
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .sovereignty-bar:active {
+      background: var(--surface-2);
+    }
+
+    .sov-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .sov-dot.clean { background: var(--success); }
+    .sov-dot.violations { background: var(--error); animation: pulse 1s infinite; }
+    .sov-dot.pending { background: var(--warning); }
+
+    .sov-label {
+      font-weight: 500;
+    }
+
+    .sov-details {
+      margin-left: auto;
+      display: flex;
+      gap: 10px;
+    }
+
+    .sov-pill {
+      padding: 2px 6px;
+      border-radius: 8px;
+      font-size: 10px;
+      font-weight: 500;
+    }
+
+    .sov-pill.ok { background: rgba(34,197,94,0.15); color: var(--success); }
+    .sov-pill.warn { background: rgba(239,68,68,0.15); color: var(--error); }
+
+    .sov-expanded {
+      display: none;
+      padding: 12px 20px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .sov-expanded.open { display: block; }
+
+    .sov-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+    }
+
+    .sov-row .label { color: var(--text-dim); }
+    .sov-row .value { font-weight: 500; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🧠 Jarvis</h1>
+    <div class="status">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Connecting...</span>
+    </div>
+  </div>
+
+  <div class="content" id="messages">
+    <div class="message system">Tap record or type a command</div>
+  </div>
+
+  <div class="quick-actions">
+    <button class="quick-btn" onclick="sendCommand('brain dump')">🧠 Brain Dump</button>
+    <button class="quick-btn" onclick="sendCommand('schedule')">📅 Schedule</button>
+    <button class="quick-btn" onclick="sendCommand('study')">📚 Study</button>
+    <button class="quick-btn" onclick="sendCommand('search')">🔍 Web Search</button>
+    <button class="quick-btn" onclick="sendCommand('help')">❓ Help</button>
+  </div>
+
+  <div class="text-input-bar">
+    <input type="text" id="textInput" placeholder="Type a command..." onkeypress="if(event.key==='Enter')sendText()">
+    <button onclick="sendText()">Send</button>
+  </div>
+
+  <div class="record-bar">
+    <button class="record-btn" id="recordBtn" onmousedown="startRecording()" onmouseup="stopRecording()" ontouchstart="startRecording()" ontouchend="stopRecording()">🎤</button>
+    <div class="record-status" id="recordStatus">Hold to speak</div>
+  </div>
+
+
+  <!-- Sovereignty status widget -->
+  <div class="sovereignty-bar" id="sovBar" onclick="toggleSovDetails()">
+    <div class="sov-dot pending" id="sovDot"></div>
+    <span class="sov-label" id="sovLabel">Checking...</span>
+    <div class="sov-details">
+      <span class="sov-pill ok" id="sovTailscale" style="display:none">🔒 Tailscale</span>
+      <span class="sov-pill ok" id="sovGoogle" style="display:none">📅 Google</span>
+    </div>
+  </div>
+  <div class="sov-expanded" id="sovExpanded">
+    <div class="sov-row"><span class="label">Status</span><span class="value" id="sovStatus">—</span></div>
+    <div class="sov-row"><span class="label">Connections</span><span class="value" id="sovConns">—</span></div>
+    <div class="sov-row"><span class="label">Allowed</span><span class="value" id="sovAllowed">—</span></div>
+    <div class="sov-row"><span class="label">System</span><span class="value" id="sovSystem">—</span></div>
+    <div class="sov-row"><span class="label">Violations</span><span class="value" id="sovViolations">—</span></div>
+  </div>
+
+  <script src="/app.js"></script>
+
+</body>
+</html>

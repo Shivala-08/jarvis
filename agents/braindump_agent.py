@@ -34,17 +34,27 @@ Rules:
 """
 
 
-def process_braindump(raw_text: str, model: str = "llama3.1:latest") -> dict:
+def process_braindump(raw_text: str, model: str = "llama3.1:latest", context: str = None) -> dict:
     """Send raw text to Ollama and return structured JSON.
+
+    Args:
+        raw_text: The brain-dump text to process
+        model: Ollama model to use
+        context: Optional conversation context for multi-turn support
 
     Returns a fallback structure if Ollama returns empty or invalid JSON.
     """
+    # Build user message with optional context
+    user_content = raw_text
+    if context:
+        user_content = f"{context}\n\nCurrent input: {raw_text}"
+    
     try:
         response = ollama.chat(
             model=model,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": raw_text},
+                {"role": "user", "content": user_content},
             ],
             options={"temperature": 0.3},
         )

@@ -759,11 +759,76 @@
             }
         }
 
+        // ========== Notifications ==========
+        let notificationsEnabled = false;
+
+        async function requestNotificationPermission() {
+            if ('Notification' in window) {
+                const permission = await Notification.requestPermission();
+                notificationsEnabled = permission === 'granted';
+                if (notificationsEnabled) {
+                    showBrowserNotification('Notifications Enabled', 'You\'ll receive gentle reminders for tasks and focus nudges.');
+                }
+            }
+        }
+
+        function showBrowserNotification(title, body, category = 'general') {
+            if (!notificationsEnabled || !('Notification' in window)) return;
+            
+            const notif = new Notification(title, {
+                body: body,
+                icon: '/favicon.ico',
+                tag: category + '_' + Date.now(),
+                requireInteraction: false,
+            });
+            
+            notif.onclick = () => {
+                window.focus();
+                notif.close();
+            };
+        }
+
+        async function loadNotifications() {
+            try {
+                const data = await apiGet('/api/notifications');
+                const notifs = data.notifications || [];
+                const unread = data.unread_count || 0;
+                
+                // Show browser notification for new unread items
+                if (unread > 0 && notificationsEnabled) {
+                    const latest = notifs[0];
+                    if (latest && !latest.read) {
+                        showBrowserNotification(latest.title, latest.body, latest.category);
+                    }
+                }
+            } catch (err) {
+                // Notifications endpoint may not exist yet
+            }
+        }
+
+        async function markNotificationsRead() {
+            try {
+                await apiPost('/api/notifications/read-all', {});
+            } catch (err) {}
+        }
+
+        // Request notification permission on first user interaction
+        document.addEventListener('click', function requestOnce() {
+            if (!notificationsEnabled) {
+                requestNotificationPermission();
+            }
+            document.removeEventListener('click', requestOnce);
+        }, { once: true });
+
         // ========== Init: load data on page load ==========
         document.addEventListener('DOMContentLoaded', () => {
             loadSchedule();
             loadMemories();
             loadVaultStatus();
+            loadNotifications();
+            
+            // Check for notifications every 30 seconds
+            setInterval(loadNotifications, 30000);
         });
     </script>
 </body>

@@ -1,0 +1,17 @@
+{
+  "name": "adhd-copilot-desktop",
+  "version": "0.2.0",
+  "private": true,
+  "description": "ADHD Co-Processor — Native Desktop Shell (Tauri)",
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2"
+  }
+}

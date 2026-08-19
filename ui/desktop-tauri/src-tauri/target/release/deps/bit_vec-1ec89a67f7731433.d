@@ -1,0 +1,7 @@
+/Users/pallav/Downloads/jarvis-ai-assistant/ui/desktop-tauri/src-tauri/target/release/deps/bit_vec-1ec89a67f7731433.d: /Users/pallav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bit-vec-0.8.0/src/lib.rs
+
+/Users/pallav/Downloads/jarvis-ai-assistant/ui/desktop-tauri/src-tauri/target/release/deps/libbit_vec-1ec89a67f7731433.rlib: /Users/pallav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bit-vec-0.8.0/src/lib.rs
+
+/Users/pallav/Downloads/jarvis-ai-assistant/ui/desktop-tauri/src-tauri/target/release/deps/libbit_vec-1ec89a67f7731433.rmeta: /Users/pallav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bit-vec-0.8.0/src/lib.rs
+
+/Users/pallav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bit-vec-0.8.0/src/lib.rs:

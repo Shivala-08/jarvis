@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ADHD Co-Processor</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Title bar -->
+  <div class="titlebar">
+    <span class="titlebar-title">🧠 ADHD Co-Processor</span>
+    <span class="titlebar-spacer"></span>
+    <span class="titlebar-status">
+      <span class="status-dot" id="status-dot"></span>
+      <span id="status-text">Connecting…</span>
+    </span>
+  </div>
+
+  <!-- Main layout -->
+  <div class="main-layout">
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Agent</div>
+        <button class="sidebar-item active" data-view="braindump">
+          <span class="sidebar-icon">🧠</span> Brain Dump
+        </button>
+        <button class="sidebar-item" data-view="schedule">
+          <span class="sidebar-icon">📅</span> Schedule
+        </button>
+        <button class="sidebar-item" data-view="study">
+          <span class="sidebar-icon">📚</span> Study Plan
+        </button>
+        <button class="sidebar-item" data-view="code">
+          <span class="sidebar-icon">💻</span> Code Assistant
+        </button>
+        <button class="sidebar-item" data-view="web">
+          <span class="sidebar-icon">🌐</span> Web Task
+        </button>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">System</div>
+        <button class="sidebar-item" data-view="skills">
+          <span class="sidebar-icon">🛠️</span> Skills
+        </button>
+        <button class="sidebar-item" data-view="memories">
+          <span class="sidebar-icon">💾</span> Memories
+        </button>
+        <button class="sidebar-item" data-view="dashboard">
+          <span class="sidebar-icon">📊</span> Dashboard
+        </button>
+        <button class="sidebar-item" data-view="sovereignty">
+          <span class="sidebar-icon">🛡️</span> Sovereignty
+        </button>
+      </div>
+
+      <div style="margin-top:auto; padding:12px; border-top:1px solid var(--border)">
+        <div style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-muted)">
+          <span class="status-dot" id="sov-sidebar-dot"></span>
+          <span id="sov-sidebar-label">Checking...</span>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Content area -->
+    <div class="content">
+      <div class="content-header" id="content-header">
+        <h1>Brain Dump</h1>
+        <p>Dump your thoughts — the agent structures them into tasks.</p>
+      </div>
+
+      <div class="transcript-log" id="transcript-log">
+        <div class="empty-state">
+          <div class="empty-state-icon">🧠</div>
+          <h2>Ready for your thoughts</h2>
+          <p>Type or speak a brain dump. The agent will extract tasks, ideas, and reminders — then store them in memory.</p>
+        </div>
+      </div>
+
+      <!-- Voice / text input -->
+      <div class="voice-area">
+        <button class="voice-btn" id="voice-btn" title="Push to talk">🎙️</button>
+        <input type="text" class="voice-input" id="text-input" placeholder="Type a command or brain dump…" autocomplete="off">
+        <button class="voice-send" id="send-btn">Send</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

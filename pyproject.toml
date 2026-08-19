@@ -1,7 +1,7 @@
 [project]
 name = "adhd-copilot"
-version = "0.1.0"
-description = "ADHD Cognitive Co-Processor"
+version = "0.2.0"
+description = "ADHD Cognitive Co-Processor — Local-first personal AI with OpenJarvis-inspired architecture"
 requires-python = ">=3.11"
 dependencies = [
     "ollama>=0.4.0",
@@ -19,10 +19,16 @@ dependencies = [
     "google-auth>=2.0.0",
     "google-auth-oauthlib>=1.0.0",
     "google-api-python-client>=2.0.0",
+    # Phase 8: Coding assistant
+    "aider-chat>=0.70.0",
+    # Phase 9: Web-task agent (replaces browser-use)
+    "scrapling>=0.3.0",
+    "pywebview>=6.2.1",
+    "websockets>=11.0.3",
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["agents", "memory", "speech"]
+packages = ["agents", "memory", "speech", "core", "remote"]
 
 [build-system]
 requires = ["hatchling"]
