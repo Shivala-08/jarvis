@@ -126,7 +126,7 @@ def api_braindump(req: BrainDumpRequest):
             estimated_minutes=thought.get("estimated_minutes", 15),
             priority=thought.get("priority", "soon"),
         )
-    memory.capture_brain_dump(req.text)
+    memory.capture_brain_dump(req.text, braindump_result=result)
     return result
 
 
@@ -238,12 +238,17 @@ def api_network_check():
                 if len(parts) < 9:
                     continue
                 process_name = parts[0].lower()
-                remote_field = parts[8] if len(parts) > 8 else ""
-                if ":" not in remote_field:
+                conn_field = parts[8] if len(parts) > 8 else ""
+                # lsof format: local_ip:port->remote_ip:port
+                if "->" not in conn_field:
                     continue
-                remote_ip, _, remote_port = remote_field.rpartition(":")
+                _local, _sep, remote_full = conn_field.rpartition("->")
+                # remote_full is like "142.250.x.x:443"
+                if ":" not in remote_full:
+                    continue
+                remote_ip, _, remote_port_str = remote_full.rpartition(":")
                 try:
-                    remote_port = int(remote_port)
+                    remote_port = int(remote_port_str)
                 except ValueError:
                     continue
                 # Skip localhost connections
@@ -467,7 +472,7 @@ async def ws_voice(websocket):
                                 estimated_minutes=thought.get("estimated_minutes", 15),
                                 priority=thought.get("priority", "soon"),
                             )
-                        memory.capture_brain_dump(transcript)
+                        memory.capture_brain_dump(transcript, braindump_result=result)
                     else:
                         # Command mode: route to the appropriate handler
                         text_lower = transcript.lower().strip()
@@ -602,7 +607,7 @@ def run_cli():
                     estimated_minutes=thought.get("estimated_minutes", 15),
                     priority=thought.get("priority", "soon"),
                 )
-            memory.capture_brain_dump(text)
+            memory.capture_brain_dump(text, braindump_result=result)
             print(f"\n  ✅ Captured {len(result.get('thoughts', []))} thoughts")
             print(f"  💭 Mood: {result.get('mood_hint', 'unknown')}")
             print(f"  🎯 Suggested first step: {result.get('suggested_first_step', 'none')}")

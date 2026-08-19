@@ -248,10 +248,17 @@ class ADHDMemoryEngine:
             self._memory = _get_memory_client()
         return self._memory
 
-    def capture_brain_dump(self, raw_text: str, metadata: Optional[dict] = None) -> dict:
+    def capture_brain_dump(self, raw_text: str, metadata: Optional[dict] = None, braindump_result: Optional[dict] = None) -> dict:
         """Ingest raw brain-dump text. Extracts and stores semantic memories.
 
         Also writes a formatted note to the Obsidian vault (if configured).
+
+        Args:
+            raw_text: The original brain-dump text.
+            metadata: Optional metadata to attach to the memory.
+            braindump_result: Optional structured output from the braindump agent
+                (with thoughts, mood_hint, suggested_first_step).  When provided,
+                the Obsidian note will include the full structured thoughts.
 
         Returns: {"memories_stored": int, "memories": [...], "obsidian_written": bool}
         """
@@ -272,21 +279,25 @@ class ADHDMemoryEngine:
                 pass
         if self._obsidian:
             try:
-                # Build a result-like dict for the note formatter
-                note_result = {
-                    "thoughts": [
-                        {
-                            "text": mem.get("memory", ""),
-                            "type": "observation",
-                            "priority": "soon",
-                            "estimated_minutes": 15,
-                            "tags": [],
-                        }
-                        for mem in result.get("results", [])
-                    ],
-                    "mood_hint": "captured",
-                    "suggested_first_step": "Review in Obsidian vault",
-                }
+                # Use braindump agent's structured output if available,
+                # otherwise build from Mem0 results
+                if braindump_result and braindump_result.get("thoughts"):
+                    note_result = braindump_result
+                else:
+                    note_result = {
+                        "thoughts": [
+                            {
+                                "text": mem.get("memory", ""),
+                                "type": "observation",
+                                "priority": "soon",
+                                "estimated_minutes": 15,
+                                "tags": [],
+                            }
+                            for mem in result.get("results", [])
+                        ],
+                        "mood_hint": "captured",
+                        "suggested_first_step": "Review in Obsidian vault",
+                    }
                 obsidian_written = self._obsidian.write_brain_dump_note(raw_text, note_result)
                 if obsidian_written:
                     print("  📓 Note written to Obsidian vault")
