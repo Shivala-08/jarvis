@@ -411,6 +411,10 @@ async def ws_voice(websocket):
     sample_rate = 16000
     mode = "command"
 
+    # Run blocking calls (STT, braindump, TTS) in a thread pool so they
+    # don't freeze the event loop and cause WebSocket timeouts.
+    loop = asyncio.get_event_loop()
+
     try:
         while True:
             raw = await websocket.receive()
@@ -453,11 +457,13 @@ async def ws_voice(websocket):
                     await websocket.send_json({"type": "error", "text": "Audio too short. Speak a bit longer."})
                     continue
 
-                # Transcribe with Faster-Whisper
+                # Transcribe with Faster-Whisper (blocking — run in thread)
                 try:
                     from speech.speech_pipeline import SpeechToText
                     stt = SpeechToText()
-                    transcript = stt.transcribe_numpy(audio, sample_rate)
+                    transcript = await loop.run_in_executor(
+                        None, stt.transcribe_numpy, audio, sample_rate
+                    )
                 except Exception as e:
                     await websocket.send_json({"type": "error", "text": f"Transcription failed: {e}"})
                     continue
@@ -469,29 +475,32 @@ async def ws_voice(websocket):
                 await websocket.send_json({"type": "transcript", "text": transcript})
                 print(f"  📝 Transcript: {transcript}")
 
-                # Process based on mode
+                # Process based on mode (blocking braindump + memory — run in thread)
                 response_text = ""
                 try:
                     if mode == "braindump":
-                        from agents.braindump_agent import process_braindump
-                        result = process_braindump(transcript)
-                        thought_count = len(result.get("thoughts", []))
-                        mood = result.get("mood_hint", "unknown")
-                        step = result.get("suggested_first_step", "none")
-                        response_text = (
-                            f"Captured {thought_count} thoughts. "
-                            f"Mood hint: {mood}. "
-                            f"Suggested first step: {step}."
-                        )
-                        # Store in memory
-                        memory = get_memory()
-                        for thought in result.get("thoughts", []):
-                            memory.store_task(
-                                thought["text"],
-                                estimated_minutes=thought.get("estimated_minutes", 15),
-                                priority=thought.get("priority", "soon"),
+                        def _process_braindump():
+                            from agents.braindump_agent import process_braindump
+                            result = process_braindump(transcript)
+                            thought_count = len(result.get("thoughts", []))
+                            mood = result.get("mood_hint", "unknown")
+                            step = result.get("suggested_first_step", "none")
+                            resp = (
+                                f"Captured {thought_count} thoughts. "
+                                f"Mood hint: {mood}. "
+                                f"Suggested first step: {step}."
                             )
-                        memory.capture_brain_dump(transcript, braindump_result=result)
+                            # Store in memory
+                            memory = get_memory()
+                            for thought in result.get("thoughts", []):
+                                memory.store_task(
+                                    thought["text"],
+                                    estimated_minutes=thought.get("estimated_minutes", 15),
+                                    priority=thought.get("priority", "soon"),
+                                )
+                            memory.capture_brain_dump(transcript, braindump_result=result)
+                            return resp
+                        response_text = await loop.run_in_executor(None, _process_braindump)
                     else:
                         # Command mode: route to the appropriate handler
                         text_lower = transcript.lower().strip()
@@ -507,24 +516,28 @@ async def ws_voice(websocket):
                                 "and focus nudges. Just tell me what you need."
                             )
                         else:
-                            from agents.braindump_agent import process_braindump
-                            result = process_braindump(transcript)
-                            count = len(result.get("thoughts", []))
-                            response_text = (
-                                f"Got it! Captured {count} thoughts. "
-                                f"{result.get('suggested_first_step', '')}"
-                            )
+                            def _process_command():
+                                from agents.braindump_agent import process_braindump
+                                result = process_braindump(transcript)
+                                count = len(result.get("thoughts", []))
+                                return (
+                                    f"Got it! Captured {count} thoughts. "
+                                    f"{result.get('suggested_first_step', '')}"
+                                )
+                            response_text = await loop.run_in_executor(None, _process_command)
                 except Exception as e:
                     response_text = f"Sorry, I had trouble processing that: {e}"
 
                 await websocket.send_json({"type": "response_text", "text": response_text})
                 print(f"  💬 Response: {response_text}")
 
-                # Synthesize response audio with Kokoro
+                # Synthesize response audio with Kokoro (blocking — run in thread)
                 try:
                     from speech.speech_pipeline import TextToSpeech
                     tts = TextToSpeech()
-                    response_audio = tts.synthesize(response_text)
+                    response_audio = await loop.run_in_executor(
+                        None, tts.synthesize, response_text
+                    )
 
                     if len(response_audio) > 0:
                         await websocket.send_json({"type": "status", "text": "Speaking..."})
