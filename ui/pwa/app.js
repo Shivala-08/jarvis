@@ -12,13 +12,19 @@
 // Config
 // ---------------------------------------------------------------------------
 
+// API token for authenticated requests
+const token = localStorage.getItem('ADHD_COPILOT_TOKEN') || '';
+
 const getWsUrl = () => {
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const token = localStorage.getItem('ADHD_COPILOT_TOKEN') || '';
   const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
   return `${proto}//${window.location.host}/ws/pwa${tokenParam}`;
 };
 const SAMPLE_RATE = 16000;
+const authHeaders = {
+  'Content-Type': 'application/json',
+  ...(token ? { 'X-API-Token': token } : {}),
+};
 
 // ---------------------------------------------------------------------------
 // State
@@ -393,16 +399,24 @@ function sendText() {
     // Fallback to REST API
     fetch('/api/braindump', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders,
       body: JSON.stringify({ text: text }),
     })
-    .then(r => r.json())
+    .then(r => {
+      if (r.status === 401) {
+        addMessage('system', '⚠️ Token required. Open Settings to set your token.');
+        throw new Error('Unauthorized');
+      }
+      return r.json();
+    })
     .then(data => {
       const thoughts = data.thoughts || [];
       addMessage('assistant', `Captured ${thoughts.length} thoughts.`);
     })
     .catch(e => {
-      addMessage('system', `⚠️ Error: ${e.message}`);
+      if (e.message !== 'Unauthorized') {
+        addMessage('system', `⚠️ Error: ${e.message}`);
+      }
     });
   }
 
@@ -471,7 +485,7 @@ async function pollNotifications() {
     
     // Mark as read after showing
     if (notifs.length > 0) {
-      await fetch('/api/notifications/read-all', { method: 'POST' });
+      await fetch('/api/notifications/read-all', { method: 'POST', headers: authHeaders });
     }
   } catch (e) {
     // Notifications endpoint may not exist
@@ -487,7 +501,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Register service worker for offline support
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(e => {
+    navigator.serviceWorker.register('/pwa/static/sw.js').catch(e => {
       console.log('SW registration skipped:', e.message);
     });
   }
@@ -503,6 +517,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Poll for notifications every 30 seconds
   setInterval(pollNotifications, 30000);
+
+  // Load saved token into input if present
+  const tokenInput = document.getElementById('tokenInput');
+  if (tokenInput && token) {
+    tokenInput.value = token;
+  }
 });
 
 
@@ -514,7 +534,11 @@ let sovExpanded = false;
 
 async function checkSovereignty() {
   try {
-    const res = await fetch('/api/sovereignty/status');
+    const res = await fetch('/api/sovereignty/status', { headers: authHeaders });
+    if (res.status === 401) {
+      addMessage('system', '⚠️ Token required for sovereignty check. Open Settings to set your token.');
+      return;
+    }
     if (!res.ok) return;
     const d = await res.json();
 
@@ -563,3 +587,20 @@ document.addEventListener('DOMContentLoaded', () => {
   checkSovereignty();
   setInterval(checkSovereignty, 60000);
 });
+
+// ---------------------------------------------------------------------------
+// Token Settings
+// ---------------------------------------------------------------------------
+
+function saveToken() {
+  const input = document.getElementById('tokenInput');
+  const val = input.value.trim();
+  localStorage.setItem('ADHD_COPILOT_TOKEN', val);
+  // Reload to pick up new token everywhere
+  location.reload();
+}
+
+function toggleSettings() {
+  const panel = document.getElementById('settings-panel');
+  panel.classList.toggle('open');
+}

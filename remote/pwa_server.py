@@ -136,6 +136,10 @@ def setup_pwa_routes(app: FastAPI) -> None:
             return FileResponse(str(index_path))
         return JSONResponse({"error": "PWA not found"}, status_code=404)
 
+    # Mount PWA static files (app.js, sw.js, etc.)
+    if PWA_DIR.exists():
+        app.mount("/pwa/static", StaticFiles(directory=str(PWA_DIR)), name="pwa-static")
+
     # ---------- WebSocket for real-time voice ----------
 
     @app.websocket("/ws/pwa")

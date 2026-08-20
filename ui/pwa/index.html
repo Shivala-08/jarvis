@@ -329,6 +329,15 @@
 
     .sov-row .label { color: var(--text-dim); }
     .sov-row .value { font-weight: 500; }
+
+    #settings-panel {
+      display: none;
+      padding: 12px 20px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+    }
+    #settings-panel.open { display: block; }
   </style>
 </head>
 <body>
@@ -364,13 +373,16 @@
 
 
   <!-- Sovereignty status widget -->
-  <div class="sovereignty-bar" id="sovBar" onclick="toggleSovDetails()">
-    <div class="sov-dot pending" id="sovDot"></div>
-    <span class="sov-label" id="sovLabel">Checking...</span>
-    <div class="sov-details">
-      <span class="sov-pill ok" id="sovTailscale" style="display:none">🔒 Tailscale</span>
-      <span class="sov-pill ok" id="sovGoogle" style="display:none">📅 Google</span>
+  <div class="sovereignty-bar">
+    <div id="sovBar" onclick="toggleSovDetails()" style="display:flex; align-items:center; gap:8px; flex:1; cursor:pointer;">
+      <div class="sov-dot pending" id="sovDot"></div>
+      <span class="sov-label" id="sovLabel">Checking...</span>
+      <div class="sov-details">
+        <span class="sov-pill ok" id="sovTailscale" style="display:none">🔒 Tailscale</span>
+        <span class="sov-pill ok" id="sovGoogle" style="display:none">📅 Google</span>
+      </div>
     </div>
+    <button onclick="event.stopPropagation(); toggleSettings()" style="background:none; border:none; color:var(--text-dim); font-size:16px; cursor:pointer; padding:4px 8px;">⚙️</button>
   </div>
   <div class="sov-expanded" id="sovExpanded">
     <div class="sov-row"><span class="label">Status</span><span class="value" id="sovStatus">—</span></div>
@@ -380,7 +392,17 @@
     <div class="sov-row"><span class="label">Violations</span><span class="value" id="sovViolations">—</span></div>
   </div>
 
-  <script src="/app.js"></script>
+  <!-- Settings panel -->
+  <div class="sov-expanded" id="settings-panel">
+    <div style="margin-bottom: 10px; font-weight: 600;">🔑 API Token</div>
+    <div style="display: flex; gap: 8px;">
+      <input type="password" id="tokenInput" placeholder="ADHD_COPILOT_TOKEN" style="flex:1; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-size: 13px; outline: none;">
+      <button onclick="saveToken()" style="padding: 8px 14px; border-radius: 8px; border: none; background: var(--accent); color: white; font-size: 13px; cursor: pointer;">Save</button>
+    </div>
+    <div style="font-size: 11px; color: var(--text-dim); margin-top: 6px;">Required for remote access. Set in your server's ADHD_COPILOT_TOKEN env var.</div>
+  </div>
+
+  <script src="/pwa/static/app.js"></script>
 
 </body>
 </html>
