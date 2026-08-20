@@ -299,7 +299,7 @@ def api_diagnostics():
 
 
 @app.post("/api/braindump")
-def api_braindump(req: BrainDumpRequest):
+async def api_braindump(req: BrainDumpRequest):
     """Process a brain dump with latency tracking and conversation context."""
     from agents.braindump_agent import process_braindump
     
@@ -309,10 +309,12 @@ def api_braindump(req: BrainDumpRequest):
         conv_mem = get_conversation_memory()
         conv_context = conv_mem.get_context(req.conversation_id)
     
-    # Track latency
+    # Track latency — run LLM call in thread pool to avoid blocking the event loop
     latency_tracker = get_latency_tracker()
     with latency_tracker.track("braindump"):
-        result = process_braindump(req.text, context=conv_context if conv_context else None)
+        result = await asyncio.to_thread(
+            process_braindump, req.text, context=conv_context if conv_context else None
+        )
     
     # Store conversation turns
     if req.conversation_id:
