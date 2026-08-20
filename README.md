@@ -92,7 +92,7 @@ curl -fsSL https://astral.sh/uv/install.sh | bash
 curl -fsSL https://ollama.com/install.sh | bash
 
 # Pull models
-ollama pull llama3.1
+ollama pull qwen3.5:9b
 ollama pull nomic-embed-text
 
 # Start Qdrant (vector database)

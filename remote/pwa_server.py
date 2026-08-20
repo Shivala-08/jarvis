@@ -407,7 +407,7 @@ def broadcast_sync(update_type: str, data: Dict[str, Any]) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Standalone server
+# Standalone server (For isolated local testing/debugging only)
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
