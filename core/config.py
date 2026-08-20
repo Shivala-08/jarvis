@@ -39,4 +39,4 @@ def get_coding_model() -> str:
     if env_model:
         return env_model
         
-    return CONFIG.get("engine", {}).get("ollama", {}).get("models", {}).get("coding", "qwen3.5:9b")
+    return CONFIG.get("engine", {}).get("ollama", {}).get("models", {}).get("coding", "ornith:9b")

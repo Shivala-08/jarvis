@@ -231,6 +231,13 @@ uv run python main.py --test
 | GET | `/api/sovereignty/report` | 30s trace + report |
 | POST | `/api/sovereignty/purge` | Purge all memory + logs |
 
+### Sync (Phase C)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/sync/status` | Sync layer status (pending deltas, last export) |
+| POST | `/api/sync/export` | Manually trigger state export |
+| POST | `/api/sync/ingest` | Manually trigger delta ingestion |
+
 ### WebSocket
 | Endpoint | Description |
 |----------|-------------|
@@ -246,8 +253,12 @@ All settings in `config/config.toml`:
 ```toml
 [engine.ollama]
 base_url = "http://localhost:11434"
-default_model = "llama3.1:latest"
+default_model = "qwen3.5:9b"
 embedding_model = "nomic-embed-text"
+
+[engine.ollama.models]
+reasoning = "qwen3.5:9b"
+coding = "qwen2.5-coder:7b"
 
 [speech]
 whisper_model = "small.en"
@@ -305,7 +316,10 @@ adhd-copilot/
 │   ├── cron_scheduler.py         # Persistent recurring tasks
 │   ├── memory_service.py         # Background fact extraction
 │   ├── sovereignty.py            # Network trace + allowlist + purge
-│   └── notifications.py          # Browser + PWA notification manager
+│   ├── notifications.py          # Browser + PWA notification manager
+│   ├── escalation.py             # Cloud escalation routing + llm_call helper
+│   ├── cloud_router.py           # Multi-provider failover (Groq, Cerebras, etc.)
+│   └── sync.py                   # Cross-device sync (Phase C: export/ingest deltas)
 ├── remote/
 │   ├── pwa_server.py             # WebSocket + REST for PWA
 │   ├── wyoming_bridge.py         # Android wake-word bridge
@@ -315,6 +329,8 @@ adhd-copilot/
 │   ├── desktop/                  # Desktop shell UI (9 views)
 │   └── desktop-tauri/            # Tauri native app (builds to .app/.dmg)
 ├── vault/                        # Obsidian vault (auto-written)
+├── sync/
+│   └── export/                   # Delta files for cross-device sync (Phase C)
 ├── config/
 │   ├── config.toml               # All settings
 │   └── google_client_secret.json # OAuth credentials (gitignored)
@@ -400,6 +416,50 @@ GET /api/sovereignty/status → {"verdict": "clean", "violations": 0, ...}
 
 ---
 
+## Cross-Device Sync (Phase C)
+
+One consistent state across MacBook + phone, without either device being a fixed always-on server.
+
+### Setup
+
+```bash
+# Install Syncthing
+brew install syncthing   # macOS
+# Android: Syncthing from F-Droid or Play Store
+# iOS: Syncthing from App Store
+```
+
+Configure two synced folders in Syncthing:
+1. **`vault/`** — Obsidian notes (human-readable, direct sync)
+2. **`sync/export/`** — append-only state dumps (machine state)
+
+### How It Works
+
+```
+┌──────────────┐     Syncthing      ┌──────────────┐
+│   MacBook    │ ◄──────────────────► │    Phone     │
+│              │                      │              │
+│ vault/       │  ← direct sync →    │ vault/       │
+│ sync/export/ │  ← delta sync →     │ sync/export/ │
+└──────────────┘                      └──────────────┘
+
+On startup:  ingest_pending_deltas() — reconcile incoming changes
+On shutdown: export_state_delta()    — snapshot modified memories
+
+⚠️  Never sync live Qdrant/SQLite files directly.
+    Always: export → sync the export → ingest.
+```
+
+### API
+
+```
+GET  /api/sync/status  → pending deltas, last export time
+POST /api/sync/export  → manually trigger export
+POST /api/sync/ingest  → manually trigger ingestion
+```
+
+---
+
 ## Cost
 
 | Component | Cost |
@@ -438,6 +498,9 @@ Optional: Raspberry Pi 5 (~$80) for always-on host.
 | 11 | Remote access + PWA | ✅ |
 | 12 | Phone-side wake word | ✅ Android / ⚠️ iOS (manual) |
 | 13 | UI shell & integration | ✅ Tauri + pywebview |
+| A | Model layer verification | ✅ |
+| B | Cloud escalation router | ✅ |
+| C | Cross-device sync | ✅ |
 | 14 | Data sovereignty pass | ✅ |
 
 ---

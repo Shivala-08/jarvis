@@ -1,10 +1,14 @@
 """Brain Dump Agent — converts raw stream-of-consciousness text into structured JSON tasks.
 
 This is the simplest agent: validates plumbing for the agent orchestration layer.
-Zero cloud calls; all inference runs locally via Ollama.
+Inference runs locally via Ollama, with optional cloud escalation for large inputs.
 """
 import json
-import ollama
+import logging
+
+from core.escalation import llm_call
+
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """\
 You are a brain-dump processor for someone with ADHD.
@@ -53,17 +57,15 @@ def process_braindump(raw_text: str, model: str = None, context: str = None) -> 
         user_content = f"{context}\n\nCurrent input: {raw_text}"
     
     try:
-        response = ollama.chat(
+        content = llm_call(
+            prompt=user_content,
+            system_prompt=SYSTEM_PROMPT,
+            task_type="braindump",
             model=model,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_content},
-            ],
-            options={"temperature": 0.3},
+            temperature=0.3,
         )
-        content = response["message"]["content"].strip()
     except Exception as e:
-        print(f"  ⚠️  Ollama error: {e}")
+        logger.warning(f"LLM call failed: {e}")
         content = ""
 
     # Strip markdown fences if present

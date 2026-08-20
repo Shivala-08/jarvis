@@ -25,6 +25,9 @@ dependencies = [
     "scrapling>=0.3.0",
     "pywebview>=6.2.1",
     "websockets>=11.0.3",
+    "mss>=10.2.0",
+    "pillow>=12.1.1",
+    "mlx-vlm>=0.3.1",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -33,3 +36,8 @@ packages = ["agents", "memory", "speech", "core", "remote"]
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]

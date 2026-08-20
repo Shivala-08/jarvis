@@ -36,7 +36,7 @@ def _get_memory_client():
         "llm": {
             "provider": "ollama",
             "config": {
-                "model": OLLAMA_CFG.get("default_model", "qwen2.5-coder:14b"),
+                "model": OLLAMA_CFG.get("default_model", "ornith:9b"),
                 "ollama_base_url": OLLAMA_CFG.get("base_url", "http://localhost:11434"),
             },
         },

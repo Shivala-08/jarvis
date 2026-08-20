@@ -147,12 +147,52 @@ try:
 except ImportError:
     pass  # PWA module not available
 
+# ---------- Phase C: Sync layer (ingest on startup) ----------
+try:
+    from core.sync import ingest_pending_deltas, export_state_delta
+
+    @app.on_event("startup")
+    def _sync_ingest():
+        """Ingest any delta files delivered by Syncthing from other devices."""
+        try:
+            from memory.adhd_memory import ADHDMemoryEngine
+            engine = ADHDMemoryEngine()
+            result = ingest_pending_deltas(engine)
+            if result["ingested_files"] > 0:
+                logger.info(
+                    f"Sync: ingested {result['records_upserted']} records "
+                    f"from {result['ingested_files']} delta files"
+                )
+        except Exception as e:
+            logger.warning(f"Sync ingest failed (non-fatal): {e}")
+
+    @app.on_event("shutdown")
+    def _sync_export():
+        """Export memories to delta files before shutdown."""
+        try:
+            from memory.adhd_memory import ADHDMemoryEngine
+            engine = ADHDMemoryEngine()
+            result = export_state_delta(engine)
+            if result["exported"] > 0:
+                logger.info(f"Sync: exported {result['exported']} memories to {result.get('file', '?')}")
+        except Exception as e:
+            logger.warning(f"Sync export failed (non-fatal): {e}")
+except ImportError:
+    pass  # sync module not available
+
 # Set up notification handlers
 try:
     from core.notifications import setup_notification_handlers
     setup_notification_handlers()
 except ImportError:
     pass  # Notifications module not available
+
+# ---------- Phase D: Proactive triggers ----------
+try:
+    from core.proactive import register_proactive_triggers
+    register_proactive_triggers()
+except Exception:
+    pass  # proactive module not available
 
 # ---------- Request Models ----------
 
@@ -723,6 +763,93 @@ def api_sovereignty_purge():
     """Purge ALL memory: Qdrant collection, task history, logs."""
     from core.sovereignty import purge_all_memory
     return purge_all_memory()
+
+
+# ---------- Phase C: Cross-device Sync ----------
+
+@app.get("/api/sync/status", dependencies=[Depends(require_token)])
+def api_sync_status():
+    """Check sync layer status — pending deltas, last export, folder state."""
+    from core.sync import get_sync_status
+    return get_sync_status()
+
+
+@app.post("/api/sync/export", dependencies=[Depends(require_token)])
+def api_sync_export():
+    """Manually trigger a state export (usually runs on shutdown)."""
+    from core.sync import export_state_delta
+    memory = get_memory()
+    return export_state_delta(memory)
+
+
+@app.post("/api/sync/ingest", dependencies=[Depends(require_token)])
+def api_sync_ingest():
+    """Manually trigger delta ingestion (usually runs on startup)."""
+    from core.sync import ingest_pending_deltas
+    memory = get_memory()
+    return ingest_pending_deltas(memory)
+
+
+# ---------- Phase D: Proactive triggers ----------
+
+@app.get("/api/proactive/status", dependencies=[Depends(require_token)])
+def api_proactive_status():
+    """Check proactive trigger status — registered events, cron tasks."""
+    from core.proactive import get_proactive_status
+    return get_proactive_status()
+
+
+@app.post("/api/proactive/morning-briefing", dependencies=[Depends(require_token)])
+def api_proactive_morning():
+    """Manually trigger a morning briefing (usually fires at 08:00)."""
+    from core.proactive import morning_briefing
+    text = morning_briefing()
+    return {"text": text, "triggered": True}
+
+
+@app.post("/api/proactive/idle-check", dependencies=[Depends(require_token)])
+def api_proactive_idle(minutes_idle: int = 30):
+    """Manually trigger an idle check-in."""
+    from core.proactive import idle_check
+    text = idle_check(minutes_idle)
+    return {"text": text, "triggered": text is not None, "minutes_idle": minutes_idle}
+
+
+# ---------- Phase E: Vision ----------
+
+class VisionRequest(BaseModel):
+    prompt: str = "What's on screen? Describe any errors or issues."
+    image_url: Optional[str] = None
+
+
+@app.get("/api/vision/status", dependencies=[Depends(require_token)])
+def api_vision_status():
+    """Check vision agent status — model availability, dependencies."""
+    from agents.vision_agent import get_vision_status
+    return get_vision_status()
+
+
+@app.post("/api/vision/analyze-screen", dependencies=[Depends(require_token)])
+def api_vision_screen(prompt: str = "What's on screen?"):
+    """Capture and analyze a screenshot."""
+    from agents.vision_agent import analyze_screen
+    return analyze_screen(prompt)
+
+
+@app.post("/api/vision/analyze-image", dependencies=[Depends(require_token)])
+def api_vision_image(request: VisionRequest):
+    """Analyze an image from URL or path."""
+    from agents.vision_agent import analyze_image
+    if not request.image_url:
+        return {"analysis": "No image_url provided", "source": "error", "image_size": [0, 0]}
+    return analyze_image(request.image_url, request.prompt)
+
+
+@app.post("/api/vision/analyze-upload", dependencies=[Depends(require_token)])
+def api_vision_upload(file: bytes, prompt: str = "What do you see?"):
+    """Analyze an uploaded image file."""
+    from agents.vision_agent import analyze_image_bytes
+    return analyze_image_bytes(file, prompt)
 
 
 # ---------- Notification endpoints ----------

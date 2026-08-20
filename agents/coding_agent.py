@@ -14,11 +14,14 @@ Usage:
     result = assistant.explain("What does the scheduler_agent.py rebalance function do?")
 """
 import json
+import logging
 import os
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 try:
     import ollama
@@ -33,6 +36,8 @@ except (FileNotFoundError, Exception):
     CONFIG = {}
 
 from core.config import get_coding_model
+from core.escalation import should_escalate, estimate_tokens
+from core.cloud_router import escalate, get_available_providers, CloudRouterError
 DEFAULT_MODEL = get_coding_model()
 
 # Project root for file context
@@ -176,8 +181,48 @@ class CodeAssistant:
         except Exception:
             return False
 
+    def _parse_response(self, raw: str) -> Dict[str, Any]:
+        """Parse LLM response as JSON, handling markdown fences."""
+        content = raw.strip()
+        if content.startswith("```"):
+            content = content.split("\n", 1)[1]
+            content = content.rsplit("```", 1)[0].strip()
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError:
+            return {
+                "action": "explain",
+                "summary": "LLM returned non-JSON response.",
+                "files_changed": [],
+                "explanation": content,
+                "confidence": "low",
+                "warnings": ["Failed to parse LLM response as JSON"],
+            }
+
     def _query_llm(self, prompt: str, context: str = "") -> Dict[str, Any]:
-        """Query the local LLM for a coding response."""
+        """Query the LLM for a coding response.
+
+        Attempts cloud escalation first if conditions warrant it,
+        then falls back to local Ollama.
+        """
+        full_prompt = f"{context}\n\nRequest: {prompt}" if context else prompt
+        context_tokens = estimate_tokens(full_prompt)
+
+        # --- Cloud escalation attempt ---
+        provider = should_escalate(
+            task_type="coding",
+            context_tokens=context_tokens,
+            local_attempts_failed=0,
+            text=full_prompt,
+        )
+        if provider and provider in get_available_providers():
+            try:
+                raw = escalate(full_prompt, preferred=provider, system_prompt=SYSTEM_PROMPT)
+                return self._parse_response(raw)
+            except CloudRouterError as e:
+                logger.warning(f"Cloud escalation failed ({e}), falling back to local")
+
+        # --- Local fallback ---
         if not HAS_OLLAMA:
             return {
                 "action": "explain",
@@ -187,8 +232,6 @@ class CodeAssistant:
                 "confidence": "low",
                 "warnings": ["Ollama not installed or not running"],
             }
-
-        full_prompt = f"{context}\n\nRequest: {prompt}" if context else prompt
 
         try:
             response = ollama.chat(
@@ -200,23 +243,8 @@ class CodeAssistant:
                 options={"temperature": 0.2},
             )
             content = response["message"]["content"].strip()
+            return self._parse_response(content)
 
-            # Strip markdown fences
-            if content.startswith("```"):
-                content = content.split("\n", 1)[1]
-                content = content.rsplit("```", 1)[0].strip()
-
-            return json.loads(content)
-
-        except json.JSONDecodeError:
-            return {
-                "action": "explain",
-                "summary": "LLM returned non-JSON response.",
-                "files_changed": [],
-                "explanation": content if 'content' in dir() else "No response",
-                "confidence": "low",
-                "warnings": ["Failed to parse LLM response as JSON"],
-            }
         except Exception as e:
             return {
                 "action": "explain",

@@ -407,13 +407,20 @@ def broadcast_sync(update_type: str, data: Dict[str, Any]) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Standalone server (For isolated local testing/debugging only)
+# Standalone server — for isolated local testing/debugging ONLY
+#
+# ⚠️  The real app never runs this directly. main.py calls
+#     setup_pwa_routes(app) and mounts the PWA on port 8080.
+#     This block spins up a separate standalone server on port 8081
+#     so you can test PWA endpoints in isolation.
+#     Your frontend will NOT connect to this unless you manually
+#     point it at localhost:8081.
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
     import uvicorn
 
-    standalone_app = FastAPI(title="PWA Server")
+    standalone_app = FastAPI(title="PWA Server (standalone debug)")
     standalone_app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -422,7 +429,8 @@ if __name__ == "__main__":
     )
     setup_pwa_routes(standalone_app)
 
-    print("🌐 PWA Server starting at http://localhost:8081")
+    print("🌐 PWA Server (STANDALONE DEBUG) starting at http://localhost:8081")
+    print("   ⚠️  This is NOT the main app. The main app runs on port 8080.")
     print("   PWA: http://localhost:8081/app")
     print("   WebSocket: ws://localhost:8081/ws/pwa")
     print("   Press Ctrl+C to stop.")

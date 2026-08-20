@@ -10,14 +10,18 @@ Features:
 All inference runs locally via Ollama; calendar API is free-tier Google.
 """
 import json
+import logging
 import os
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
-import ollama
 import toml
+
+from core.escalation import llm_call
+
+logger = logging.getLogger(__name__)
 
 CONFIG = toml.load("config/config.toml")
 SCHEDULER_CFG = CONFIG["scheduler"]
@@ -236,24 +240,20 @@ def generate_micro_sprint(task_text: str, model: str = None) -> str:
     if model is None:
         from core.config import get_default_model
         model = get_default_model()
-    response = ollama.chat(
-        model=model,
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "You are a calm, supportive ADHD co-processor. "
-                    "Given a task, produce a single short sentence (≤20 words) that "
-                    "suggests a 5–15 minute micro-sprint. Use supportive phrasing, "
-                    "never imperative commands. Example: 'How about spending 10 minutes "
-                    "drafting the outline?' not 'Do the outline now.'"
-                ),
-            },
-            {"role": "user", "content": task_text},
-        ],
-        options={"temperature": 0.5},
+    sprint_system = (
+        "You are a calm, supportive ADHD co-processor. "
+        "Given a task, produce a single short sentence (≤20 words) that "
+        "suggests a 5–15 minute micro-sprint. Use supportive phrasing, "
+        "never imperative commands. Example: 'How about spending 10 minutes "
+        "drafting the outline?' not 'Do the outline now.'"
     )
-    return response["message"]["content"].strip()
+    return llm_call(
+        prompt=task_text,
+        system_prompt=sprint_system,
+        task_type="scheduler",
+        model=model,
+        temperature=0.5,
+    )
 
 
 # ---------------------------------------------------------------------------

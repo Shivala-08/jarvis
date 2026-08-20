@@ -25,6 +25,7 @@ try:
 except ImportError:
     HAS_OLLAMA = False
 
+from core.config import get_default_model
 from core.event_bus import EventType, Event, publish, subscribe
 
 import logging
@@ -35,8 +36,8 @@ logger = logging.getLogger(__name__)
 class FactExtractor:
     """Extracts facts from conversations using the local LLM."""
     
-    def __init__(self, model: str = "llama3.1:latest"):
-        self.model = model
+    def __init__(self, model: str = None):
+        self.model = model or get_default_model()
         self._extraction_prompt = """Extract factual information from this conversation.
 Return a JSON array of facts, where each fact has:
 - "text": the fact (concise, clear statement)
@@ -126,9 +127,11 @@ class MemoryService:
     def __init__(
         self,
         memory_engine: Any,
-        model: str = "llama3.1:latest",
+        model: str = None,
         max_queue: int = 256,
     ):
+        if model is None:
+            model = get_default_model()
         self.memory_engine = memory_engine
         self.extractor = FactExtractor(model)
         self._queue: queue.Queue = queue.Queue(maxsize=max(1, max_queue))
@@ -348,12 +351,14 @@ _service_lock = threading.Lock()
 
 def build_memory_service(
     memory_engine: Any,
-    model: str = "llama3.1:latest",
+    model: str = None,
 ) -> Optional[MemoryService]:
     """Build and start the memory service.
     
     Returns None if memory engine is not available.
     """
+    if model is None:
+        model = get_default_model()
     global _memory_service
     
     if memory_engine is None:

@@ -15,6 +15,7 @@ Usage:
     result = agent.search("latest AI research papers on arxiv")
 """
 import json
+import logging
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -33,6 +34,9 @@ except (FileNotFoundError, Exception):
     CONFIG = {}
 
 from core.config import get_default_model
+from core.escalation import llm_call
+
+logger = logging.getLogger(__name__)
 DEFAULT_MODEL = get_default_model()
 
 # Log directory for web task results
@@ -157,7 +161,6 @@ Rules:
 def _plan_task(task_description: str, model: str = DEFAULT_MODEL) -> Dict[str, Any]:
     """Use LLM to plan a web task."""
     if not HAS_OLLAMA:
-        # Fallback: treat the task as a direct URL fetch
         return {
             "task_summary": task_description,
             "steps": [
@@ -174,15 +177,13 @@ def _plan_task(task_description: str, model: str = DEFAULT_MODEL) -> Dict[str, A
         }
 
     try:
-        response = ollama.chat(
+        content = llm_call(
+            prompt=task_description,
+            system_prompt=TASK_PLANNER_PROMPT,
+            task_type="web_task",
             model=model,
-            messages=[
-                {"role": "system", "content": TASK_PLANNER_PROMPT},
-                {"role": "user", "content": task_description},
-            ],
-            options={"temperature": 0.2},
+            temperature=0.2,
         )
-        content = response["message"]["content"].strip()
 
         # Strip markdown fences
         if content.startswith("```"):
@@ -192,6 +193,7 @@ def _plan_task(task_description: str, model: str = DEFAULT_MODEL) -> Dict[str, A
         return json.loads(content)
 
     except Exception as e:
+        logger.warning(f"Task planning LLM call failed: {e}")
         # Fallback plan
         return {
             "task_summary": task_description,
@@ -229,7 +231,6 @@ Rules:
 def _synthesize_results(task: str, raw_results: List[Dict[str, Any]], model: str = DEFAULT_MODEL) -> str:
     """Use LLM to synthesize web results into a coherent answer."""
     if not HAS_OLLAMA:
-        # Simple concatenation fallback
         parts = []
         for r in raw_results:
             if r.get("text"):
@@ -246,17 +247,16 @@ def _synthesize_results(task: str, raw_results: List[Dict[str, Any]], model: str
     context = "\n\n".join(context_parts)
 
     try:
-        response = ollama.chat(
+        return llm_call(
+            prompt=f"Task: {task}\n\nResults:\n{context}",
+            system_prompt=SYNTHESIS_PROMPT,
+            task_type="web_task",
             model=model,
-            messages=[
-                {"role": "system", "content": SYNTHESIS_PROMPT},
-                {"role": "user", "content": f"Task: {task}\n\nResults:\n{context}"},
-            ],
-            options={"temperature": 0.3},
+            temperature=0.3,
         )
-        return response["message"]["content"].strip()
 
     except Exception as e:
+        logger.warning(f"Result synthesis LLM call failed: {e}")
         return f"Synthesis failed: {e}\n\nRaw results:\n{context[:2000]}"
 
 
