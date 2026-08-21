@@ -54,6 +54,7 @@ data/
 # Obsidian vault notes (auto-generated, keep Dashboard.md only)
 vault/*.md
 !vault/Dashboard.md
+vault/.obsidian/
 
 # TTS test audio
 *.wav

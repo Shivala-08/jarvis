@@ -359,7 +359,7 @@ def _get_lock():
     global _lock
     if _lock is None:
         import threading
-        _lock = threading.Lock()
+        _lock = threading.RLock()
     return _lock
 
 
